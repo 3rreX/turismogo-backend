@@ -54,6 +54,11 @@ const servicioSchema = new mongoose.Schema({
   imagen: {
     type: String,
     required: true
+  },
+  propietarioId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    required: false
   }
 });
 
