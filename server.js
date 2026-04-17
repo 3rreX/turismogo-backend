@@ -30,6 +30,11 @@ const usuarioSchema = new mongoose.Schema({
   password: {
     type: String,
     required: true
+  },
+  role: {
+    type: String,
+    enum: ['usuario', 'propietario', 'admin'],
+    default: 'usuario'
   }
 });
 
@@ -152,14 +157,15 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ error: 'Contraseña incorrecta' });
     }
 
-    const token = jwt.sign(
-      {
-        id: usuario._id,
-        username: usuario.username
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+const token = jwt.sign(
+  {
+    id: usuario._id,
+    username: usuario.username,
+    role: usuario.role
+  },
+  process.env.JWT_SECRET,
+  { expiresIn: '7d' }
+);
 
     res.json({ token });
   } catch (error) {
