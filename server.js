@@ -106,6 +106,14 @@ function authMiddleware(req, res, next) {
   }
 }
 
+function propietarioMiddleware(req, res, next) {
+  if (req.user.role === 'propietario' || req.user.role === 'admin') {
+    return next();
+  }
+
+  return res.status(403).json({ error: 'Acceso solo para propietarios o admin' });
+}
+
 // =========================
 // RUTAS
 // =========================
@@ -206,6 +214,31 @@ app.get('/api/servicios', async (req, res) => {
   }
 });
 
+app.post('/api/servicios', authMiddleware, propietarioMiddleware, async (req, res) => {
+  try {
+    const { nombre, descripcion, precio, imagen } = req.body;
+
+    if (!nombre || !descripcion || !precio || !imagen) {
+      return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+    }
+
+    const nuevoServicio = new Servicio({
+      nombre,
+      descripcion,
+      precio,
+      imagen,
+      propietarioId: req.user.id
+    });
+
+    await nuevoServicio.save();
+
+    res.json({ message: 'Servicio creado correctamente', servicio: nuevoServicio });
+  } catch (error) {
+    console.error('Error al crear servicio:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // Crear reserva
 app.post('/api/reservas', authMiddleware, async (req, res) => {
   try {
@@ -265,6 +298,27 @@ const PORT = process.env.PORT || 3000;
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log('✅ Conectado a MongoDB');
+        const adminExistente = await Usuario.findOne({ username: 'admin' });
+
+    if (adminExistente) {
+      adminExistente.role = 'admin';
+      await adminExistente.save();
+      console.log('✅ Usuario admin actualizado a role admin');
+    }
+
+    const propietarioExistente = await Usuario.findOne({ username: 'propietario1' });
+
+    if (!propietarioExistente) {
+      const hashedPasswordProp = await bcrypt.hash('1234', 10);
+
+      await Usuario.create({
+        username: 'propietario1',
+        password: hashedPasswordProp,
+        role: 'propietario'
+      });
+
+      console.log('✅ Usuario propietario1 creado');
+    }
 
     const existeAdmin = await Usuario.findOne({ username: 'admin' });
 
