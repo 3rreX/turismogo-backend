@@ -14,8 +14,6 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY?.trim(),
   api_secret: process.env.CLOUDINARY_API_SECRET?.trim()
 });
-console.log('Cloudinary cloud_name:', JSON.stringify(process.env.CLOUDINARY_CLOUD_NAME?.trim()));
-console.log('Cloudinary api_key:', JSON.stringify(process.env.CLOUDINARY_API_KEY?.trim()));
 
 const storage = multer.memoryStorage();
 
