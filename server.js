@@ -4,8 +4,49 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const streamifier = require('streamifier');
 
 const app = express();
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = multer.memoryStorage();
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype && file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Solo se permiten archivos de imagen'));
+    }
+  }
+});
+
+function subirBufferACloudinary(fileBuffer) {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'turismogo',
+        resource_type: 'image'
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+
+    streamifier.createReadStream(fileBuffer).pipe(stream);
+  });
+}
 
 // Middlewares
 app.use(express.json());
@@ -214,25 +255,34 @@ app.get('/api/servicios', async (req, res) => {
   }
 });
 
-app.post('/api/servicios', authMiddleware, propietarioMiddleware, async (req, res) => {
+app.post('/api/servicios', authMiddleware, propietarioMiddleware, upload.single('imagen'), async (req, res) => {
   try {
-    const { nombre, descripcion, precio, imagen } = req.body;
+    const { nombre, descripcion, precio } = req.body;
 
-    if (!nombre || !descripcion || !precio || !imagen) {
+    if (!nombre || !descripcion || !precio) {
       return res.status(400).json({ error: 'Todos los campos son obligatorios' });
     }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'Debes subir una imagen' });
+    }
+
+    const resultado = await subirBufferACloudinary(req.file.buffer);
 
     const nuevoServicio = new Servicio({
       nombre,
       descripcion,
-      precio,
-      imagen,
+      precio: Number(precio),
+      imagen: resultado.secure_url,
       propietarioId: req.user.id
     });
 
     await nuevoServicio.save();
 
-    res.json({ message: 'Servicio creado correctamente', servicio: nuevoServicio });
+    res.json({
+      message: 'Servicio creado correctamente',
+      servicio: nuevoServicio
+    });
   } catch (error) {
     console.error('Error al crear servicio:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
