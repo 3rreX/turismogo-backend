@@ -94,7 +94,11 @@ const servicioSchema = new mongoose.Schema({
   },
   imagen: {
     type: String,
-    required: true
+    required: false
+  },
+  imagenes: {
+    type: [String],
+    default: []
   },
   propietarioId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -102,7 +106,6 @@ const servicioSchema = new mongoose.Schema({
     required: false
   }
 });
-
 const reservaSchema = new mongoose.Schema({
   usuarioId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -255,7 +258,7 @@ app.get('/api/servicios', async (req, res) => {
   }
 });
 
-app.post('/api/servicios', authMiddleware, propietarioMiddleware, upload.single('imagen'), async (req, res) => {
+app.post('/api/servicios', authMiddleware, propietarioMiddleware, upload.array('imagenes', 5), async (req, res) => {
   try {
     const { nombre, descripcion, precio } = req.body;
 
@@ -263,19 +266,24 @@ app.post('/api/servicios', authMiddleware, propietarioMiddleware, upload.single(
       return res.status(400).json({ error: 'Todos los campos son obligatorios' });
     }
 
-    if (!req.file) {
-      return res.status(400).json({ error: 'Debes subir una imagen' });
-    }
+    if (!req.files || req.files.length === 0) {
+  return res.status(400).json({ error: 'Debes subir al menos una imagen' });
+}
 
-    const resultado = await subirBufferACloudinary(req.file.buffer);
+const imagenesSubidas = [];
 
+for (const file of req.files) {
+  const resultado = await subirBufferACloudinary(file.buffer);
+  imagenesSubidas.push(resultado.secure_url);
+}
     const nuevoServicio = new Servicio({
-      nombre,
-      descripcion,
-      precio: Number(precio),
-      imagen: resultado.secure_url,
-      propietarioId: req.user.id
-    });
+  nombre,
+  descripcion,
+  precio: Number(precio),
+  imagen: imagenesSubidas[0],
+  imagenes: imagenesSubidas,
+  propietarioId: req.user.id
+});
 
     await nuevoServicio.save();
 
@@ -320,7 +328,7 @@ app.delete('/api/servicios/:id', authMiddleware, propietarioMiddleware, async (r
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
-app.put('/api/servicios/:id', authMiddleware, propietarioMiddleware, upload.single('imagen'), async (req, res) => {
+app.put('/api/servicios/:id', authMiddleware, propietarioMiddleware, upload.array('imagenes', 5), async (req, res) => {
   try {
     const servicio = await Servicio.findById(req.params.id);
 
@@ -341,10 +349,20 @@ app.put('/api/servicios/:id', authMiddleware, propietarioMiddleware, upload.sing
     if (descripcion) servicio.descripcion = descripcion;
     if (precio) servicio.precio = Number(precio);
 
-    if (req.file) {
-      const resultado = await subirBufferACloudinary(req.file.buffer);
-      servicio.imagen = resultado.secure_url;
-    }
+    if (req.files && req.files.length > 0) {
+  const nuevasImagenes = [];
+
+  for (const file of req.files) {
+    const resultado = await subirBufferACloudinary(file.buffer);
+    nuevasImagenes.push(resultado.secure_url);
+  }
+
+  servicio.imagenes = [...(servicio.imagenes || []), ...nuevasImagenes];
+
+  if (!servicio.imagen) {
+    servicio.imagen = nuevasImagenes[0];
+  }
+}
 
     await servicio.save();
 
@@ -357,7 +375,44 @@ app.put('/api/servicios/:id', authMiddleware, propietarioMiddleware, upload.sing
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.delete('/api/servicios/:id/imagenes', authMiddleware, propietarioMiddleware, async (req, res) => {
+  try {
+    const { imagenUrl } = req.body;
 
+    if (!imagenUrl) {
+      return res.status(400).json({ error: 'URL de imagen requerida' });
+    }
+
+    const servicio = await Servicio.findById(req.params.id);
+
+    if (!servicio) {
+      return res.status(404).json({ error: 'Servicio no encontrado' });
+    }
+
+    if (
+      servicio.propietarioId?.toString() !== req.user.id &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({ error: 'No puedes modificar este servicio' });
+    }
+
+    servicio.imagenes = (servicio.imagenes || []).filter(img => img !== imagenUrl);
+
+    if (servicio.imagen === imagenUrl) {
+      servicio.imagen = servicio.imagenes[0] || '';
+    }
+
+    await servicio.save();
+
+    res.json({
+      message: 'Imagen eliminada correctamente',
+      servicio
+    });
+  } catch (error) {
+    console.error('Error al eliminar imagen:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 // Crear reserva
 app.post('/api/reservas', authMiddleware, async (req, res) => {
   try {
