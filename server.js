@@ -320,6 +320,43 @@ app.delete('/api/servicios/:id', authMiddleware, propietarioMiddleware, async (r
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.put('/api/servicios/:id', authMiddleware, propietarioMiddleware, upload.single('imagen'), async (req, res) => {
+  try {
+    const servicio = await Servicio.findById(req.params.id);
+
+    if (!servicio) {
+      return res.status(404).json({ error: 'Servicio no encontrado' });
+    }
+
+    if (
+      servicio.propietarioId?.toString() !== req.user.id &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({ error: 'No puedes editar este servicio' });
+    }
+
+    const { nombre, descripcion, precio } = req.body;
+
+    if (nombre) servicio.nombre = nombre;
+    if (descripcion) servicio.descripcion = descripcion;
+    if (precio) servicio.precio = Number(precio);
+
+    if (req.file) {
+      const resultado = await subirBufferACloudinary(req.file.buffer);
+      servicio.imagen = resultado.secure_url;
+    }
+
+    await servicio.save();
+
+    res.json({
+      message: 'Servicio actualizado correctamente',
+      servicio
+    });
+  } catch (error) {
+    console.error('Error al editar servicio:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 
 // Crear reserva
 app.post('/api/reservas', authMiddleware, async (req, res) => {
