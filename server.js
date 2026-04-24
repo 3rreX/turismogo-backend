@@ -288,6 +288,38 @@ app.post('/api/servicios', authMiddleware, propietarioMiddleware, upload.single(
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.get('/api/mis-servicios', authMiddleware, propietarioMiddleware, async (req, res) => {
+  try {
+    const servicios = await Servicio.find({ propietarioId: req.user.id });
+    res.json(servicios);
+  } catch (error) {
+    console.error('Error al obtener mis servicios:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+app.delete('/api/servicios/:id', authMiddleware, propietarioMiddleware, async (req, res) => {
+  try {
+    const servicio = await Servicio.findById(req.params.id);
+
+    if (!servicio) {
+      return res.status(404).json({ error: 'Servicio no encontrado' });
+    }
+
+    if (
+      servicio.propietarioId?.toString() !== req.user.id &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({ error: 'No puedes eliminar este servicio' });
+    }
+
+    await Servicio.findByIdAndDelete(req.params.id);
+
+    res.json({ message: 'Servicio eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar servicio:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 
 // Crear reserva
 app.post('/api/reservas', authMiddleware, async (req, res) => {
