@@ -500,6 +500,34 @@ app.get('/api/reservas-propietario', authMiddleware, propietarioMiddleware, asyn
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.put('/api/reservas/:id/cancelar', authMiddleware, async (req, res) => {
+  try {
+    const reserva = await Reserva.findById(req.params.id);
+
+    if (!reserva) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    if (reserva.usuarioId.toString() !== req.user.id) {
+      return res.status(403).json({ error: 'No puedes cancelar esta reserva' });
+    }
+
+    if (reserva.estado === 'cancelada') {
+      return res.status(400).json({ error: 'La reserva ya está cancelada' });
+    }
+
+    reserva.estado = 'cancelada';
+    await reserva.save();
+
+    res.json({
+      message: 'Reserva cancelada correctamente',
+      reserva
+    });
+  } catch (error) {
+    console.error('Error al cancelar reserva:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 app.put('/api/reservas/:id/estado', authMiddleware, propietarioMiddleware, async (req, res) => {
   try {
     const { estado } = req.body;
