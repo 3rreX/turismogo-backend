@@ -76,9 +76,17 @@ const usuarioSchema = new mongoose.Schema({
     type: String,
     enum: ['usuario', 'propietario', 'admin'],
     default: 'usuario'
+  },
+  suscripcionActiva: {
+    type: Boolean,
+    default: false
+  },
+  plan: {
+    type: String,
+    enum: ['ninguno', 'basico', 'pro', 'premium'],
+    default: 'ninguno'
   }
 });
-
 const servicioSchema = new mongoose.Schema({
   nombre: {
     type: String,
@@ -277,6 +285,13 @@ app.get('/api/servicios', async (req, res) => {
 
 app.post('/api/servicios', authMiddleware, propietarioMiddleware, upload.array('imagenes', 5), async (req, res) => {
   try {
+        const usuarioActual = await Usuario.findById(req.user.id);
+
+    if (usuarioActual.role === 'propietario' && !usuarioActual.suscripcionActiva) {
+      return res.status(403).json({
+        error: 'Debes tener una suscripción activa para publicar servicios'
+      });
+    }
     const { nombre, descripcion, precio } = req.body;
 
     if (!nombre || !descripcion || !precio) {
@@ -621,6 +636,30 @@ app.put('/api/admin/usuarios/:id/role', authMiddleware, adminMiddleware, async (
     });
   } catch (error) {
     console.error('Error al actualizar rol:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+app.put('/api/admin/usuarios/:id/suscripcion', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { suscripcionActiva, plan } = req.body;
+
+    const usuario = await Usuario.findById(req.params.id).select('-password');
+
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    usuario.suscripcionActiva = Boolean(suscripcionActiva);
+    usuario.plan = plan || (suscripcionActiva ? 'basico' : 'ninguno');
+
+    await usuario.save();
+
+    res.json({
+      message: 'Suscripción actualizada correctamente',
+      usuario
+    });
+  } catch (error) {
+    console.error('Error al actualizar suscripción:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
