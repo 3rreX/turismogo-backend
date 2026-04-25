@@ -663,6 +663,38 @@ app.put('/api/admin/usuarios/:id/suscripcion', authMiddleware, adminMiddleware, 
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.put('/api/mi-suscripcion', authMiddleware, async (req, res) => {
+  try {
+    const { plan } = req.body;
+
+    if (!['basico', 'pro', 'premium'].includes(plan)) {
+      return res.status(400).json({ error: 'Plan inválido' });
+    }
+
+    const usuario = await Usuario.findById(req.user.id).select('-password');
+
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (usuario.role !== 'propietario' && usuario.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo propietarios pueden activar suscripción' });
+    }
+
+    usuario.suscripcionActiva = true;
+    usuario.plan = plan;
+
+    await usuario.save();
+
+    res.json({
+      message: 'Suscripción activada correctamente',
+      usuario
+    });
+  } catch (error) {
+    console.error('Error al activar mi suscripción:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 // =========================
 // CONEXIÓN MONGODB + SERVER
 // =========================
