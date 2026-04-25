@@ -112,6 +112,11 @@ const reservaSchema = new mongoose.Schema({
     ref: 'Usuario',
     required: true
   },
+  servicioId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Servicio',
+    required: false
+  },
   servicio: {
     type: String,
     required: true
@@ -123,6 +128,11 @@ const reservaSchema = new mongoose.Schema({
   fechaFin: {
     type: String,
     required: true
+  },
+  estado: {
+    type: String,
+    enum: ['pendiente', 'confirmada', 'rechazada', 'cancelada'],
+    default: 'pendiente'
   }
 });
 
@@ -436,12 +446,20 @@ app.post('/api/reservas', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Ese servicio ya está reservado en esas fechas' });
     }
 
-    const nuevaReserva = new Reserva({
-      usuarioId: req.user.id,
-      servicio,
-      fechaInicio,
-      fechaFin
-    });
+    const servicioEncontrado = await Servicio.findOne({ nombre: servicio });
+
+if (!servicioEncontrado) {
+  return res.status(404).json({ error: 'Servicio no encontrado' });
+}
+
+const nuevaReserva = new Reserva({
+  usuarioId: req.user.id,
+  servicioId: servicioEncontrado._id,
+  servicio,
+  fechaInicio,
+  fechaFin,
+  estado: 'pendiente'
+});
 
     await nuevaReserva.save();
 
@@ -462,7 +480,59 @@ app.get('/api/reservas', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.get('/api/reservas-propietario', authMiddleware, propietarioMiddleware, async (req, res) => {
+  try {
+    const serviciosDelPropietario = await Servicio.find({
+      propietarioId: req.user.id
+    }).select('_id');
 
+    const idsServicios = serviciosDelPropietario.map(s => s._id);
+
+    const reservas = await Reserva.find({
+      servicioId: { $in: idsServicios }
+    })
+      .populate('usuarioId', 'username')
+      .populate('servicioId', 'nombre precio imagen');
+
+    res.json(reservas);
+  } catch (error) {
+    console.error('Error al obtener reservas del propietario:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+app.put('/api/reservas/:id/estado', authMiddleware, propietarioMiddleware, async (req, res) => {
+  try {
+    const { estado } = req.body;
+
+    if (!['confirmada', 'rechazada', 'cancelada'].includes(estado)) {
+      return res.status(400).json({ error: 'Estado inválido' });
+    }
+
+    const reserva = await Reserva.findById(req.params.id).populate('servicioId');
+
+    if (!reserva) {
+      return res.status(404).json({ error: 'Reserva no encontrada' });
+    }
+
+    if (
+      reserva.servicioId?.propietarioId?.toString() !== req.user.id &&
+      req.user.role !== 'admin'
+    ) {
+      return res.status(403).json({ error: 'No puedes modificar esta reserva' });
+    }
+
+    reserva.estado = estado;
+    await reserva.save();
+
+    res.json({
+      message: 'Estado de reserva actualizado',
+      reserva
+    });
+  } catch (error) {
+    console.error('Error al actualizar estado de reserva:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 // =========================
 // CONEXIÓN MONGODB + SERVER
 // =========================
