@@ -167,6 +167,13 @@ function propietarioMiddleware(req, res, next) {
 
   return res.status(403).json({ error: 'Acceso solo para propietarios o admin' });
 }
+function adminMiddleware(req, res, next) {
+  if (req.user.role === 'admin') {
+    return next();
+  }
+
+  return res.status(403).json({ error: 'Acceso solo para administradores' });
+}
 
 // =========================
 // RUTAS
@@ -558,6 +565,36 @@ app.put('/api/reservas/:id/estado', authMiddleware, propietarioMiddleware, async
     });
   } catch (error) {
     console.error('Error al actualizar estado de reserva:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+app.get('/api/admin/usuarios', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const usuarios = await Usuario.find().select('-password');
+    res.json(usuarios);
+  } catch (error) {
+    console.error('Error admin usuarios:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+app.get('/api/admin/servicios', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const servicios = await Servicio.find().populate('propietarioId', 'username role');
+    res.json(servicios);
+  } catch (error) {
+    console.error('Error admin servicios:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+app.get('/api/admin/reservas', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const reservas = await Reserva.find()
+      .populate('usuarioId', 'username role')
+      .populate('servicioId', 'nombre precio propietarioId');
+
+    res.json(reservas);
+  } catch (error) {
+    console.error('Error admin reservas:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
