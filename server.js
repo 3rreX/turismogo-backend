@@ -598,6 +598,32 @@ app.get('/api/admin/reservas', authMiddleware, adminMiddleware, async (req, res)
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.put('/api/admin/usuarios/:id/role', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const { role } = req.body;
+
+    if (!['usuario', 'propietario', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Rol inválido' });
+    }
+
+    const usuario = await Usuario.findById(req.params.id).select('-password');
+
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    usuario.role = role;
+    await usuario.save();
+
+    res.json({
+      message: 'Rol actualizado correctamente',
+      usuario
+    });
+  } catch (error) {
+    console.error('Error al actualizar rol:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 // =========================
 // CONEXIÓN MONGODB + SERVER
 // =========================
