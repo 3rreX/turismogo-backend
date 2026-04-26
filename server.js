@@ -175,6 +175,21 @@ const reservaSchema = new mongoose.Schema({
     default: ''
   },
 
+  pagoEstado: {
+  type: String,
+  enum: ['pendiente', 'pagado', 'fallido'],
+  default: 'pendiente'
+  },
+
+  montoPagado: {
+  type: Number,
+  default: 0
+  },
+  tokenPago: {
+  type: String,
+  default: ''
+  },
+
   estado: {
     type: String,
     enum: ['pendiente', 'confirmada', 'rechazada', 'cancelada'],
@@ -996,6 +1011,78 @@ app.post('/api/reserva-publica', async (req, res) => {
       error: 'Error interno del servidor'
     });
   }
+  app.post('/api/reserva-publica/pagar', async (req, res) => {
+  try {
+    const {
+      servicioId,
+      fechaInicio,
+      fechaFin,
+      personas,
+      nombreCliente,
+      emailCliente,
+      telefonoCliente,
+      mensajeCliente
+    } = req.body;
+
+    if (!servicioId || !fechaInicio || !fechaFin || !nombreCliente || !emailCliente) {
+      return res.status(400).json({
+        error: 'Faltan datos obligatorios para la reserva'
+      });
+    }
+
+    const servicio = await Servicio.findById(servicioId);
+
+    if (!servicio) {
+      return res.status(404).json({
+        error: 'Servicio no encontrado'
+      });
+    }
+
+    const nuevaReserva = new Reserva({
+      usuarioId: null,
+      servicioId: servicio._id,
+      servicio: servicio.nombre,
+      fechaInicio,
+      fechaFin,
+      personas,
+      nombreCliente,
+      emailCliente,
+      telefonoCliente,
+      mensajeCliente,
+      montoPagado: servicio.precio,
+      pagoEstado: 'pendiente',
+      estado: 'pendiente'
+    });
+
+    await nuevaReserva.save();
+
+    const buyOrder = `reserva-${Date.now()}`;
+    const sessionId = `publica-${nuevaReserva._id}`;
+    const amount = Number(servicio.precio);
+    const returnUrl = process.env.WEBPAY_RETURN_URL;
+
+    const response = await webpayTransaction.create(
+      buyOrder,
+      sessionId,
+      amount,
+      returnUrl
+    );
+
+    nuevaReserva.tokenPago = response.token;
+    await nuevaReserva.save();
+
+    res.json({
+      url: response.url,
+      token: response.token
+    });
+
+  } catch (error) {
+    console.error('Error pago reserva pública:', error);
+    res.status(500).json({
+      error: 'No fue posible iniciar el pago'
+    });
+  }
+});
 });
 // =========================
 // CONEXIÓN MONGODB + SERVER
