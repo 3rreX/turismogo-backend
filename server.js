@@ -125,7 +125,8 @@ const reservaSchema = new mongoose.Schema({
   usuarioId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Usuario',
-    required: true
+    required: false,
+    default: null
   },
   servicioId: {
     type: mongoose.Schema.Types.ObjectId,
