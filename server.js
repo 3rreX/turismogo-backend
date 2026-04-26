@@ -900,17 +900,21 @@ app.get('/api/servicios/:id/publico', async (req, res) => {
 app.post('/api/reserva-publica', async (req, res) => {
   try {
     const {
-      servicioId,
-      fechaInicio,
-      fechaFin,
-      personas
-    } = req.body;
+  servicioId,
+  fechaInicio,
+  fechaFin,
+  personas,
+  nombreCliente,
+  emailCliente,
+  telefonoCliente,
+  mensajeCliente
+} = req.body;
 
-    if (!servicioId || !fechaInicio || !fechaFin) {
-      return res.status(400).json({
-        error: 'Faltan datos obligatorios para la reserva'
-      });
-    }
+    if (!servicioId || !fechaInicio || !fechaFin || !nombreCliente || !emailCliente) {
+  return res.status(400).json({
+    error: 'Nombre, correo, fechas y servicio son obligatorios'
+  });
+}
 
     const servicio = await Servicio.findById(servicioId);
 
@@ -926,6 +930,11 @@ app.post('/api/reserva-publica', async (req, res) => {
       servicioId: servicio._id,
       fechaInicio,
       fechaFin,
+      nombreCliente,
+      emailCliente,
+      telefonoCliente,
+      personas,
+      mensajeCliente,
       estado: 'pendiente'
     });
 
