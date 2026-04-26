@@ -297,7 +297,52 @@ app.post('/api/register', async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.post('/api/register-propietario', async (req, res) => {
+  try {
+    const { nombreCompleto, telefono, email, username, password } = req.body;
 
+    if (!nombreCompleto || !telefono || !email || !username || !password) {
+      return res.status(400).json({
+        error: 'Todos los campos son obligatorios'
+      });
+    }
+
+    const existe = await Usuario.findOne({
+      $or: [{ username }, { email }]
+    });
+
+    if (existe) {
+      return res.status(400).json({
+        error: 'El usuario o correo ya se encuentra registrado'
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const nuevoUsuario = new Usuario({
+      nombreCompleto,
+      telefono,
+      email,
+      username,
+      password: hashedPassword,
+      role: 'propietario',
+      suscripcionActiva: false,
+      plan: 'ninguno'
+    });
+
+    await nuevoUsuario.save();
+
+    res.json({
+      message: 'Cuenta de propietario creada correctamente. Será redirigido al pago de suscripción.'
+    });
+
+  } catch (error) {
+    console.error('Error en registro propietario:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor'
+    });
+  }
+});
 // Login
 app.post('/api/login', async (req, res) => {
   try {
