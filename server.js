@@ -1100,18 +1100,19 @@ app.post('/api/reserva-publica', async (req, res) => {
     await nuevaReserva.save();
     await enviarCorreo({
   to: emailCliente,
-  subject: 'Confirmación de reserva - TurismoGO',
+  subject: 'Solicitud de reserva recibida - TurismoGO',
   html: `
     <h2>Reserva recibida correctamente</h2>
     <p>Hola ${nombreCliente},</p>
     <p>Tu solicitud de reserva para <strong>${servicio.nombre}</strong> fue registrada exitosamente.</p>
     <p><strong>Fechas:</strong> ${fechaInicio} al ${fechaFin}</p>
-    <p><strong>Personas:</strong> ${personas}</p>
-    <p>Pronto recibirás la confirmación final de tu reserva.</p>
+    <p><strong>Personas:</strong> ${personas || 'No informado'}</p>
+    <p>Ahora debes completar el pago para confirmar definitivamente tu reserva.</p>
     <br>
     <p>Equipo TurismoGO</p>
   `
 });
+
   await enviarCorreo({
   to: process.env.EMAIL_USER,
   subject: 'Nueva reserva recibida - TurismoGO',
@@ -1183,6 +1184,21 @@ app.post('/api/reserva-publica/retorno', async (req, res) => {
         commitResponse.amount || reserva.montoPagado;
 
       await reserva.save();
+      await enviarCorreo({
+  to: reserva.emailCliente,
+  subject: 'Reserva confirmada - TurismoGO',
+  html: `
+    <h2>¡Tu reserva fue confirmada!</h2>
+    <p>Hola ${reserva.nombreCliente},</p>
+    <p>El pago de tu reserva para <strong>${reserva.servicio}</strong> fue aprobado correctamente.</p>
+    <p><strong>Fechas:</strong> ${reserva.fechaInicio} al ${reserva.fechaFin}</p>
+    <p><strong>Personas:</strong> ${reserva.personas || 'No informado'}</p>
+    <p><strong>Estado:</strong> Confirmada</p>
+    <br>
+    <p>Gracias por confiar en TurismoGO.</p>
+    <p>Equipo TurismoGO</p>
+  `
+});
 
       return res.redirect(
         `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=exitoso`
