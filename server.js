@@ -1083,7 +1083,7 @@ app.post('/api/reserva-publica', async (req, res) => {
     });
   }
 });
-});
+
 // =========================
 // CONEXIÓN MONGODB + SERVER
 // =========================
@@ -1161,3 +1161,4 @@ mongoose.connect(process.env.MONGO_URI)
     });
   })
   .catch(err => console.error('❌ Error MongoDB:', err));
+  })
