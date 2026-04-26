@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
+const nodemailer = require('nodemailer');
 const { WebpayPlus, Options, IntegrationApiKeys, IntegrationCommerceCodes, Environment } = require('transbank-sdk');
 const webpayTransaction = new WebpayPlus.Transaction(
   new Options(
@@ -21,6 +22,28 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY?.trim(),
   api_secret: process.env.CLOUDINARY_API_SECRET?.trim()
 });
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+async function enviarCorreo({ to, subject, html }) {
+  try {
+    if (!to) return;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      to,
+      subject,
+      html
+    });
+  } catch (error) {
+    console.error('Error al enviar correo:', error);
+  }
+}
 
 const storage = multer.memoryStorage();
 
