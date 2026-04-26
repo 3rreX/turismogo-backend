@@ -222,7 +222,7 @@ const Pago = mongoose.model('Pago', pagoSchema);
 
 const Usuario = mongoose.model('Usuario', usuarioSchema);
 const Servicio = mongoose.model('Servicio', servicioSchema);
-const Reserva = mongoose.model('Reserva', reservaSchema);
+
 
 // =========================
 // MIDDLEWARE AUTH
