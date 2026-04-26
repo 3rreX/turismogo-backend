@@ -54,6 +54,19 @@ function subirBufferACloudinary(fileBuffer) {
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
 }
+function obtenerPublicIdCloudinary(imagenUrl) {
+  try {
+    const url = new URL(imagenUrl);
+    const partes = url.pathname.split('/');
+
+    const uploadIndex = partes.indexOf('upload');
+    const publicIdConExtension = partes.slice(uploadIndex + 2).join('/');
+
+    return publicIdConExtension.replace(/\.[^/.]+$/, '');
+  } catch (error) {
+    return null;
+  }
+}
 
 // Middlewares
 app.use(express.json());
@@ -562,6 +575,11 @@ app.delete('/api/servicios/:id/imagenes', authMiddleware, propietarioMiddleware,
       req.user.role !== 'admin'
     ) {
       return res.status(403).json({ error: 'No puedes modificar este servicio' });
+    }
+    const publicId = obtenerPublicIdCloudinary(imagenUrl);
+
+    if (publicId) {
+    await cloudinary.uploader.destroy(publicId);
     }
 
     servicio.imagenes = (servicio.imagenes || []).filter(img => img !== imagenUrl);
