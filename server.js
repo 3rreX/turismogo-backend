@@ -1005,12 +1005,13 @@ app.post('/api/reserva-publica', async (req, res) => {
       reserva: nuevaReserva
     });
 
-  } catch (error) {
+   } catch (error) {
     console.error('Error en reserva pública:', error);
     res.status(500).json({
       error: 'Error interno del servidor'
     });
   }
+});
   app.post('/api/reserva-publica/pagar', async (req, res) => {
   try {
     const {
@@ -1161,4 +1162,3 @@ mongoose.connect(process.env.MONGO_URI)
     });
   })
   .catch(err => console.error('❌ Error MongoDB:', err));
-  })
