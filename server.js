@@ -862,6 +862,52 @@ app.get('/api/servicios/:id/publico', async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.post('/api/reserva-publica', async (req, res) => {
+  try {
+    const {
+      servicioId,
+      fechaInicio,
+      fechaFin,
+      personas
+    } = req.body;
+
+    if (!servicioId || !fechaInicio || !fechaFin) {
+      return res.status(400).json({
+        error: 'Faltan datos obligatorios para la reserva'
+      });
+    }
+
+    const servicio = await Servicio.findById(servicioId);
+
+    if (!servicio) {
+      return res.status(404).json({
+        error: 'Servicio no encontrado'
+      });
+    }
+
+    const nuevaReserva = new Reserva({
+      usuarioId: null,
+      servicio: servicio.nombre,
+      servicioId: servicio._id,
+      fechaInicio,
+      fechaFin,
+      estado: 'pendiente'
+    });
+
+    await nuevaReserva.save();
+
+    res.json({
+      message: 'Reserva registrada correctamente',
+      reserva: nuevaReserva
+    });
+
+  } catch (error) {
+    console.error('Error en reserva pública:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor'
+    });
+  }
+});
 // =========================
 // CONEXIÓN MONGODB + SERVER
 // =========================
