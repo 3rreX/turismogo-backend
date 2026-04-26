@@ -1098,6 +1098,34 @@ app.post('/api/reserva-publica', async (req, res) => {
     });
 
     await nuevaReserva.save();
+    await enviarCorreo({
+  to: emailCliente,
+  subject: 'Confirmación de reserva - TurismoGO',
+  html: `
+    <h2>Reserva recibida correctamente</h2>
+    <p>Hola ${nombreCliente},</p>
+    <p>Tu solicitud de reserva para <strong>${servicio.nombre}</strong> fue registrada exitosamente.</p>
+    <p><strong>Fechas:</strong> ${fechaInicio} al ${fechaFin}</p>
+    <p><strong>Personas:</strong> ${personas}</p>
+    <p>Pronto recibirás la confirmación final de tu reserva.</p>
+    <br>
+    <p>Equipo TurismoGO</p>
+  `
+});
+  await enviarCorreo({
+  to: process.env.EMAIL_USER,
+  subject: 'Nueva reserva recibida - TurismoGO',
+  html: `
+    <h2>Nueva reserva registrada</h2>
+    <p><strong>Cliente:</strong> ${nombreCliente}</p>
+    <p><strong>Email:</strong> ${emailCliente}</p>
+    <p><strong>Teléfono:</strong> ${telefonoCliente || 'No informado'}</p>
+    <p><strong>Servicio:</strong> ${servicio.nombre}</p>
+    <p><strong>Fechas:</strong> ${fechaInicio} al ${fechaFin}</p>
+    <p><strong>Personas:</strong> ${personas}</p>
+    <p><strong>Mensaje:</strong> ${mensajeCliente || 'Sin mensaje adicional'}</p>
+  `
+});
 
     const buyOrder = `reserva-${Date.now()}`;
     const sessionId = `publica-${nuevaReserva._id}`;
