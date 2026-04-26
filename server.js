@@ -7,7 +7,14 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
-
+const { WebpayPlus, Options, IntegrationApiKeys, IntegrationCommerceCodes, Environment } = require('transbank-sdk');
+const webpayTransaction = new WebpayPlus.Transaction(
+  new Options(
+    IntegrationCommerceCodes.WEBPAY_PLUS,
+    IntegrationApiKeys.WEBPAY,
+    Environment.Integration
+  )
+);
 const app = express();
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME?.trim(),
@@ -143,6 +150,40 @@ const reservaSchema = new mongoose.Schema({
     default: 'pendiente'
   }
 });
+const pagoSchema = new mongoose.Schema({
+  usuarioId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    required: true
+  },
+  plan: {
+    type: String,
+    enum: ['basico', 'pro', 'premium'],
+    required: true
+  },
+  monto: {
+    type: Number,
+    required: true
+  },
+  buyOrder: {
+    type: String,
+    required: true
+  },
+  sessionId: {
+    type: String,
+    required: true
+  },
+  token: {
+    type: String
+  },
+  estado: {
+    type: String,
+    enum: ['pendiente', 'pagado', 'fallido'],
+    default: 'pendiente'
+  }
+});
+
+const Pago = mongoose.model('Pago', pagoSchema);
 
 const Usuario = mongoose.model('Usuario', usuarioSchema);
 const Servicio = mongoose.model('Servicio', servicioSchema);
@@ -693,6 +734,109 @@ app.put('/api/mi-suscripcion', authMiddleware, async (req, res) => {
   } catch (error) {
     console.error('Error al activar mi suscripción:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+app.post('/api/webpay/crear', authMiddleware, async (req, res) => {
+  try {
+    const { plan } = req.body;
+
+    const precios = {
+      basico: 9990,
+      pro: 19990,
+      premium: 39990
+    };
+
+    if (!precios[plan]) {
+      return res.status(400).json({ error: 'Plan inválido' });
+    }
+
+    const usuario = await Usuario.findById(req.user.id);
+
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (usuario.role !== 'propietario' && usuario.role !== 'admin') {
+      return res.status(403).json({ error: 'Solo propietarios pueden pagar suscripción' });
+    }
+
+    const buyOrder = `orden-${Date.now()}`;
+    const sessionId = `sesion-${req.user.id}-${Date.now()}`;
+    const amount = precios[plan];
+    const returnUrl = process.env.WEBPAY_RETURN_URL;
+
+    const response = await webpayTransaction.create(
+      buyOrder,
+      sessionId,
+      amount,
+      returnUrl
+    );
+
+    await Pago.create({
+      usuarioId: req.user.id,
+      plan,
+      monto: amount,
+      buyOrder,
+      sessionId,
+      token: response.token,
+      estado: 'pendiente'
+    });
+
+    res.json({
+      url: response.url,
+      token: response.token
+    });
+
+  } catch (error) {
+    console.error('Error al crear pago Webpay:', error);
+    res.status(500).json({ error: 'Error al crear pago Webpay' });
+  }
+});
+app.post('/api/webpay/retorno', async (req, res) => {
+  try {
+    const token = req.body.token_ws;
+
+    if (!token) {
+      return res.redirect(`${process.env.FRONTEND_URL}/dashboard.html?pago=cancelado`);
+    }
+
+    const commitResponse = await webpayTransaction.commit(token);
+
+    const pago = await Pago.findOne({ token });
+
+    if (!pago) {
+      return res.redirect(`${process.env.FRONTEND_URL}/dashboard.html?pago=error`);
+    }
+
+    if (commitResponse.status === 'AUTHORIZED') {
+      pago.estado = 'pagado';
+      await pago.save();
+
+      const usuario = await Usuario.findById(pago.usuarioId);
+
+      if (usuario) {
+        usuario.suscripcionActiva = true;
+        usuario.plan = pago.plan;
+        await usuario.save();
+      }
+
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/dashboard.html?pago=exitoso&plan=${pago.plan}`
+      );
+    }
+
+    pago.estado = 'fallido';
+    await pago.save();
+
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/dashboard.html?pago=fallido`
+    );
+
+  } catch (error) {
+    console.error('Error retorno Webpay:', error);
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/dashboard.html?pago=error`
+    );
   }
 });
 // =========================
