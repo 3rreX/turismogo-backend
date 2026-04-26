@@ -839,6 +839,29 @@ app.post('/api/webpay/retorno', async (req, res) => {
     );
   }
 });
+app.get('/api/servicios/:id/publico', async (req, res) => {
+  try {
+    const servicio = await Servicio.findById(req.params.id)
+      .populate('propietarioId', 'username role suscripcionActiva plan');
+
+    if (!servicio) {
+      return res.status(404).json({ error: 'Servicio no encontrado' });
+    }
+
+    if (
+      servicio.propietarioId &&
+      servicio.propietarioId.role === 'propietario' &&
+      !servicio.propietarioId.suscripcionActiva
+    ) {
+      return res.status(403).json({ error: 'Este servicio no está disponible actualmente' });
+    }
+
+    res.json(servicio);
+  } catch (error) {
+    console.error('Error al obtener detalle público:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
 // =========================
 // CONEXIÓN MONGODB + SERVER
 // =========================
