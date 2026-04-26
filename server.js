@@ -128,29 +128,62 @@ const reservaSchema = new mongoose.Schema({
     required: false,
     default: null
   },
+
   servicioId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Servicio',
     required: false
   },
+
   servicio: {
     type: String,
     required: true
   },
+
   fechaInicio: {
     type: String,
     required: true
   },
+
   fechaFin: {
     type: String,
     required: true
   },
+
+  nombreCliente: {
+    type: String,
+    default: ''
+  },
+
+  emailCliente: {
+    type: String,
+    default: ''
+  },
+
+  telefonoCliente: {
+    type: String,
+    default: ''
+  },
+
+  personas: {
+    type: String,
+    default: ''
+  },
+
+  mensajeCliente: {
+    type: String,
+    default: ''
+  },
+
   estado: {
     type: String,
     enum: ['pendiente', 'confirmada', 'rechazada', 'cancelada'],
     default: 'pendiente'
   }
 });
+
+const Reserva = mongoose.model('Reserva', reservaSchema);
+  
 const pagoSchema = new mongoose.Schema({
   usuarioId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -182,6 +215,7 @@ const pagoSchema = new mongoose.Schema({
     enum: ['pendiente', 'pagado', 'fallido'],
     default: 'pendiente'
   }
+  
 });
 
 const Pago = mongoose.model('Pago', pagoSchema);
