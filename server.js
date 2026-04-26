@@ -1084,6 +1084,59 @@ app.post('/api/reserva-publica', async (req, res) => {
     });
   }
 });
+app.post('/api/reserva-publica/retorno', async (req, res) => {
+  try {
+    const token = req.body.token_ws;
+
+    if (!token) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=cancelado`
+      );
+    }
+
+    const commitResponse = await webpayTransaction.commit(token);
+
+    const reserva = await Reserva.findOne({
+      tokenPago: token
+    });
+
+    if (!reserva) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=error`
+      );
+    }
+
+    if (commitResponse.status === 'AUTHORIZED') {
+      reserva.pagoEstado = 'pagado';
+      reserva.estado = 'confirmada';
+      reserva.montoPagado =
+        commitResponse.amount || reserva.montoPagado;
+
+      await reserva.save();
+
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=exitoso`
+      );
+    }
+
+    reserva.pagoEstado = 'fallido';
+    await reserva.save();
+
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=fallido`
+    );
+
+  } catch (error) {
+    console.error(
+      'Error retorno pago reserva pública:',
+      error
+    );
+
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=error`
+    );
+  }
+});
 
 // =========================
 // CONEXIÓN MONGODB + SERVER
