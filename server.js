@@ -63,6 +63,24 @@ const upload = multer({
   }
 });
 
+function limpiarTexto(valor, max = 120) {
+  if (typeof valor !== 'string') return '';
+  return valor.trim().slice(0, max);
+}
+
+function esEmailValido(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function esFechaValida(fecha) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(fecha);
+}
+
+function esPrecioValido(precio) {
+  const numero = Number(precio);
+  return Number.isFinite(numero) && numero > 0;
+}
+
 function subirBufferACloudinary(fileBuffer) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -154,6 +172,19 @@ app.use(cors({
 // =========================
 
 const usuarioSchema = new mongoose.Schema({
+  nombreCompleto: {
+  type: String,
+  default: ''
+},
+telefono: {
+  type: String,
+  default: ''
+},
+email: {
+  type: String,
+  default: '',
+  lowercase: true
+},
   username: {
     type: String,
     required: true,
