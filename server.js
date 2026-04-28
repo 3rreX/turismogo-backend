@@ -1072,7 +1072,55 @@ app.post('/api/webpay/crear', authMiddleware, async (req, res) => {
   }
 });
 app.get('/api/webpay/retorno', async (req, res) => {
-  return res.redirect(`${process.env.FRONTEND_URL}/dashboard.html?pago=error`);
+  try {
+    console.log('GET RETORNO PLAN QUERY:', req.query);
+
+    const token = req.query.token_ws;
+
+    if (!token) {
+      return res.redirect(`${process.env.FRONTEND_URL}/dashboard.html?pago=cancelado`);
+    }
+
+    const commitResponse = await webpayTransaction.commit(token);
+
+    console.log('RESPUESTA WEBPAY PLAN GET:', commitResponse);
+
+    const pago = await Pago.findOne({ token });
+
+    if (!pago) {
+      return res.redirect(`${process.env.FRONTEND_URL}/dashboard.html?pago=error`);
+    }
+
+    if (
+      commitResponse.status === 'AUTHORIZED' &&
+      commitResponse.response_code === 0
+    ) {
+      pago.estado = 'pagado';
+      await pago.save();
+
+      const usuario = await Usuario.findById(pago.usuarioId);
+
+      if (usuario) {
+        usuario.suscripcionActiva = true;
+        usuario.plan = pago.plan;
+        await usuario.save();
+      }
+
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/dashboard.html?pago=exitoso&plan=${pago.plan}`
+      );
+    }
+
+    pago.estado = 'fallido';
+    await pago.save();
+
+    return res.redirect(`${process.env.FRONTEND_URL}/dashboard.html?pago=fallido`);
+
+  } catch (error) {
+    console.error('Error retorno GET Webpay plan:', error);
+
+    return res.redirect(`${process.env.FRONTEND_URL}/dashboard.html?pago=error`);
+  }
 });
 app.post('/api/webpay/retorno', async (req, res) => {
   try {
@@ -1321,7 +1369,60 @@ if (fechaFin < fechaInicio) {
   }
 });
 app.get('/api/reserva-publica/retorno', async (req, res) => {
-  return res.redirect(`${process.env.FRONTEND_URL}/reserva-resultado.html?pago=error`);
+  try {
+    console.log('GET RETORNO RESERVA QUERY:', req.query);
+
+    const token = req.query.token_ws;
+
+    if (!token) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=cancelado`
+      );
+    }
+
+    const commitResponse = await webpayTransaction.commit(token);
+
+    console.log('RESPUESTA WEBPAY RESERVA GET:', commitResponse);
+
+    const reserva = await Reserva.findOne({
+      tokenPago: token
+    });
+
+    if (!reserva) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=error`
+      );
+    }
+
+    if (
+      commitResponse.status === 'AUTHORIZED' &&
+      commitResponse.response_code === 0
+    ) {
+      reserva.pagoEstado = 'pagado';
+      reserva.estado = 'confirmada';
+      reserva.montoPagado = commitResponse.amount || reserva.montoPagado;
+
+      await reserva.save();
+
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=exitoso`
+      );
+    }
+
+    reserva.pagoEstado = 'fallido';
+    await reserva.save();
+
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=fallido`
+    );
+
+  } catch (error) {
+    console.error('Error retorno GET reserva pública:', error);
+
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=error`
+    );
+  }
 });
 app.post('/api/reserva-publica/retorno', async (req, res) => {
   try {
