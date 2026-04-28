@@ -1090,7 +1090,10 @@ app.post('/api/webpay/retorno', async (req, res) => {
       return res.redirect(`${process.env.FRONTEND_URL}/dashboard.html?pago=error`);
     }
 
-    if (commitResponse.status === 'AUTHORIZED') {
+    if (
+  commitResponse.status === 'AUTHORIZED' &&
+  commitResponse.response_code === 0
+) { 
       pago.estado = 'pagado';
       await pago.save();
 
@@ -1341,7 +1344,10 @@ app.post('/api/reserva-publica/retorno', async (req, res) => {
       );
     }
 
-    if (commitResponse.status === 'AUTHORIZED') {
+    if (
+  commitResponse.status === 'AUTHORIZED' &&
+  commitResponse.response_code === 0
+) {
       reserva.pagoEstado = 'pagado';
       reserva.estado = 'confirmada';
       reserva.montoPagado =
