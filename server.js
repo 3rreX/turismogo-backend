@@ -2,6 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
@@ -92,7 +94,35 @@ function obtenerPublicIdCloudinary(imagenUrl) {
 }
 
 // Middlewares
-app.use(express.json());
+app.use(helmet({
+  crossOriginResourcePolicy: false
+}));
+
+app.use(express.json({
+  limit: '10mb'
+}));
+
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 300,
+  message: {
+    error: 'Demasiadas solicitudes. Intenta nuevamente en unos minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use(globalLimiter);
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 8,
+  message: {
+    error: 'Demasiados intentos de login. Intenta nuevamente más tarde.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 app.use(cors({
   origin: [
@@ -396,7 +426,7 @@ app.post('/api/register-propietario', async (req, res) => {
   }
 });
 // Login
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', loginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
