@@ -1042,7 +1042,7 @@ app.post('/api/webpay/crear', authMiddleware, async (req, res) => {
     const buyOrder = `orden-${Date.now()}`;
     const sessionId = `sesion-${req.user.id}-${Date.now()}`;
     const amount = precios[plan];
-    const returnUrl = process.env.WEBPAY_RETURN_URL;
+    const returnUrl = process.env.WEBPAY_PLAN_RETURN_URL;
 
     const response = await webpayTransaction.create(
       buyOrder,
@@ -1070,6 +1070,9 @@ app.post('/api/webpay/crear', authMiddleware, async (req, res) => {
     console.error('Error al crear pago Webpay:', error);
     res.status(500).json({ error: 'Error al crear pago Webpay' });
   }
+});
+app.get('/api/webpay/retorno', async (req, res) => {
+  return res.redirect(`${process.env.FRONTEND_URL}/dashboard.html?pago=error`);
 });
 app.post('/api/webpay/retorno', async (req, res) => {
   try {
@@ -1289,7 +1292,7 @@ if (fechaFin < fechaInicio) {
     const buyOrder = `reserva-${Date.now()}`;
     const sessionId = `publica-${nuevaReserva._id}`;
     const amount = Number(servicio.precio);
-    const returnUrl = process.env.WEBPAY_RETURN_URL;
+    const returnUrl = process.env.WEBPAY_RESERVA_RETURN_URL;
 
     const response = await webpayTransaction.create(
       buyOrder,
@@ -1312,6 +1315,9 @@ if (fechaFin < fechaInicio) {
       error: 'No fue posible iniciar el pago'
     });
   }
+});
+app.get('/api/reserva-publica/retorno', async (req, res) => {
+  return res.redirect(`${process.env.FRONTEND_URL}/reserva-resultado.html?pago=error`);
 });
 app.post('/api/reserva-publica/retorno', async (req, res) => {
   try {
