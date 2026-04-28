@@ -78,6 +78,23 @@ function subirBufferACloudinary(fileBuffer) {
 
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
+  function limpiarTexto(valor, max = 120) {
+  if (typeof valor !== 'string') return '';
+  return valor.trim().slice(0, max);
+}
+
+function esEmailValido(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function esFechaValida(fecha) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(fecha);
+}
+
+function esPrecioValido(precio) {
+  const numero = Number(precio);
+  return Number.isFinite(numero) && numero > 0;
+}
 }
 function obtenerPublicIdCloudinary(imagenUrl) {
   try {
@@ -378,11 +395,18 @@ app.get('/', (req, res) => {
 // Registro
 app.post('/api/register', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const username = limpiarTexto(req.body.username, 60);
+const password = limpiarTexto(req.body.password, 100);
 
     if (!username || !password) {
       return res.status(400).json({ error: 'Username y password son obligatorios' });
     }
+
+    if (password.length < 6) {
+  return res.status(400).json({
+    error: 'La contraseña debe tener al menos 6 caracteres'
+  });
+}
 
     const existe = await Usuario.findOne({ username });
 
@@ -407,13 +431,28 @@ app.post('/api/register', async (req, res) => {
 });
 app.post('/api/register-propietario', async (req, res) => {
   try {
-    const { nombreCompleto, telefono, email, username, password } = req.body;
+    const nombreCompleto = limpiarTexto(req.body.nombreCompleto, 100);
+const telefono = limpiarTexto(req.body.telefono, 30);
+const email = limpiarTexto(req.body.email, 100).toLowerCase();
+const username = limpiarTexto(req.body.username, 60);
+const password = limpiarTexto(req.body.password, 100);
 
     if (!nombreCompleto || !telefono || !email || !username || !password) {
       return res.status(400).json({
         error: 'Todos los campos son obligatorios'
       });
     }
+    if (!esEmailValido(email)) {
+  return res.status(400).json({
+    error: 'Correo electrónico inválido'
+  });
+}
+
+if (password.length < 6) {
+  return res.status(400).json({
+    error: 'La contraseña debe tener al menos 6 caracteres'
+  });
+}
 
     const existe = await Usuario.findOne({
       $or: [{ username }, { email }]
@@ -454,7 +493,14 @@ app.post('/api/register-propietario', async (req, res) => {
 // Login
 app.post('/api/login', loginLimiter, async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const username = limpiarTexto(req.body.username, 60);
+const password = limpiarTexto(req.body.password, 100);
+
+if (!username || !password) {
+  return res.status(400).json({
+    error: 'Usuario y contraseña son obligatorios'
+  });
+}
 
     const usuario = await Usuario.findOne({ username });
 
@@ -521,11 +567,19 @@ app.post('/api/servicios', authMiddleware, propietarioMiddleware, upload.array('
         error: 'Debes tener una suscripción activa para publicar servicios'
       });
     }
-    const { nombre, descripcion, precio } = req.body;
+    const nombre = limpiarTexto(req.body.nombre, 120);
+const descripcion = limpiarTexto(req.body.descripcion, 800);
+const precio = req.body.precio;
 
     if (!nombre || !descripcion || !precio) {
       return res.status(400).json({ error: 'Todos los campos son obligatorios' });
     }
+
+    if (!esPrecioValido(precio)) {
+  return res.status(400).json({
+    error: 'Precio inválido'
+  });
+}
 
     if (!req.files || req.files.length === 0) {
   return res.status(400).json({ error: 'Debes subir al menos una imagen' });
@@ -1112,22 +1166,38 @@ app.post('/api/reserva-publica', async (req, res) => {
 });
   app.post('/api/reserva-publica/pagar', async (req, res) => {
   try {
-    const {
-      servicioId,
-      fechaInicio,
-      fechaFin,
-      personas,
-      nombreCliente,
-      emailCliente,
-      telefonoCliente,
-      mensajeCliente
-    } = req.body;
+    const servicioId = limpiarTexto(req.body.servicioId, 80);
+    const fechaInicio = limpiarTexto(req.body.fechaInicio, 20);
+    const fechaFin = limpiarTexto(req.body.fechaFin, 20);
+    const personas = limpiarTexto(req.body.personas, 30);
+    const nombreCliente = limpiarTexto(req.body.nombreCliente, 100);
+    const emailCliente = limpiarTexto(req.body.emailCliente, 100).toLowerCase();
+    const telefonoCliente = limpiarTexto(req.body.telefonoCliente, 30);
+    const mensajeCliente = limpiarTexto(req.body.mensajeCliente, 500);
 
     if (!servicioId || !fechaInicio || !fechaFin || !nombreCliente || !emailCliente) {
       return res.status(400).json({
         error: 'Faltan datos obligatorios para la reserva'
       });
     }
+
+    if (!esEmailValido(emailCliente)) {
+  return res.status(400).json({
+    error: 'Correo electrónico inválido'
+  });
+}
+
+if (!esFechaValida(fechaInicio) || !esFechaValida(fechaFin)) {
+  return res.status(400).json({
+    error: 'Formato de fecha inválido'
+  });
+}
+
+if (fechaFin < fechaInicio) {
+  return res.status(400).json({
+    error: 'La fecha final no puede ser menor a la fecha inicial'
+  });
+}
 
     const servicio = await Servicio.findById(servicioId);
 
