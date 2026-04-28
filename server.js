@@ -983,6 +983,56 @@ app.put('/api/admin/usuarios/:id/suscripcion', authMiddleware, adminMiddleware, 
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+
+app.delete('/api/admin/usuarios/:id', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const usuarioId = req.params.id;
+
+    // Evitar que el admin se elimine a sí mismo
+    if (usuarioId === req.user.id) {
+      return res.status(400).json({
+        error: 'No puedes eliminar tu propia cuenta de administrador'
+      });
+    }
+
+    const usuario = await Usuario.findById(usuarioId);
+
+    if (!usuario) {
+      return res.status(404).json({
+        error: 'Usuario no encontrado'
+      });
+    }
+
+    // Eliminar servicios asociados
+    await Servicio.deleteMany({
+      propietarioId: usuarioId
+    });
+
+    // No eliminamos reservas históricas para no romper reportes
+    // Solo quitamos la referencia del usuario si existe
+    await Reserva.updateMany(
+      { usuarioId: usuarioId },
+      {
+        $set: {
+          usuarioId: null
+        }
+      }
+    );
+
+    await Usuario.findByIdAndDelete(usuarioId);
+
+    res.json({
+      message: 'Usuario eliminado correctamente'
+    });
+
+  } catch (error) {
+    console.error('Error al eliminar usuario:', error);
+
+    res.status(500).json({
+      error: 'Error interno del servidor'
+    });
+  }
+});
 app.put('/api/mi-suscripcion', authMiddleware, async (req, res) => {
   try {
     const { plan } = req.body;
