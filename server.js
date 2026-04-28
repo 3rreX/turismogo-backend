@@ -1083,6 +1083,7 @@ app.post('/api/webpay/retorno', async (req, res) => {
     }
 
     const commitResponse = await webpayTransaction.commit(token);
+    console.log('RESPUESTA WEBPAY PLAN:', commitResponse);
 
     const pago = await Pago.findOne({ token });
 
@@ -1333,6 +1334,7 @@ app.post('/api/reserva-publica/retorno', async (req, res) => {
     }
 
     const commitResponse = await webpayTransaction.commit(token);
+    console.log('RESPUESTA WEBPAY RESERVA:', commitResponse);
 
     const reserva = await Reserva.findOne({
       tokenPago: token
