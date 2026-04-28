@@ -312,17 +312,43 @@ const Servicio = mongoose.model('Servicio', servicioSchema);
 
 function authMiddleware(req, res, next) {
   try {
-    const token = req.headers.authorization;
+    const authHeader = req.headers.authorization;
 
-    if (!token) {
-      return res.status(401).json({ error: 'Token requerido' });
+    if (!authHeader) {
+      return res.status(401).json({
+        error: 'Token de autorización requerido'
+      });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (!authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'Formato de token inválido'
+      });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    if (!token) {
+      return res.status(401).json({
+        error: 'Token no proporcionado'
+      });
+    }
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET
+    );
+
     req.user = decoded;
+
     next();
+
   } catch (error) {
-    return res.status(401).json({ error: 'Token inválido' });
+    console.error('Error de autenticación JWT:', error);
+
+    return res.status(401).json({
+      error: 'Token inválido o expirado'
+    });
   }
 }
 
