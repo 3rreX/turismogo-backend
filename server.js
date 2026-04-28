@@ -19,6 +19,7 @@ const webpayTransaction = new WebpayPlus.Transaction(
   )
 );
 const app = express();
+app.set('trust proxy', 1);
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME?.trim(),
   api_key: process.env.CLOUDINARY_API_KEY?.trim(),
