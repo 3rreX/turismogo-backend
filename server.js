@@ -1462,13 +1462,12 @@ if (fechaFin < fechaInicio) {
 
     const conflictoReserva = await Reserva.findOne({
   servicioId: servicio._id,
-  estado: { $in: ['pendiente', 'confirmada'] },
   $or: [
-    {
-      fechaInicio: { $lte: fechaFin },
-      fechaFin: { $gte: fechaInicio }
-    }
-  ]
+    { estado: 'confirmada' },
+    { pagoEstado: 'pagado' }
+  ],
+  fechaInicio: { $lte: fechaFin },
+  fechaFin: { $gte: fechaInicio }
 });
 
 if (conflictoReserva) {
