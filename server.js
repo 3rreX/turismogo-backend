@@ -1639,19 +1639,76 @@ app.post('/api/reserva-publica/retorno', async (req, res) => {
         commitResponse.amount || reserva.montoPagado;
 
       await reserva.save();
+      const codigoReserva = `TG-${reserva._id.toString().slice(-6).toUpperCase()}`;
+      const fechaEmision = new Date().toLocaleDateString('es-CL');
+      const montoVoucher = Number(reserva.montoPagado || 0).toLocaleString('es-CL');
       await enviarCorreo({
   to: reserva.emailCliente,
-  subject: 'Reserva confirmada - TurismoGO',
+  subject: `Voucher de reserva confirmada ${codigoReserva} - TurismoGO`,
   html: `
-    <h2>¡Tu reserva fue confirmada!</h2>
-    <p>Hola ${reserva.nombreCliente},</p>
-    <p>El pago de tu reserva para <strong>${reserva.servicio}</strong> fue aprobado correctamente.</p>
-    <p><strong>Fechas:</strong> ${reserva.fechaInicio} al ${reserva.fechaFin}</p>
-    <p><strong>Personas:</strong> ${reserva.personas || 'No informado'}</p>
-    <p><strong>Estado:</strong> Confirmada</p>
-    <br>
-    <p>Gracias por confiar en TurismoGO.</p>
-    <p>Equipo TurismoGO</p>
+    <div style="font-family: Arial, sans-serif; background:#f4f8fb; padding:30px;">
+      <div style="max-width:680px; margin:auto; background:#ffffff; border-radius:18px; overflow:hidden; border:1px solid #dbeafe;">
+        
+        <div style="background:linear-gradient(135deg,#063b73,#0b6fa4); color:white; padding:28px;">
+          <h1 style="margin:0;">TurismoGO</h1>
+          <p style="margin:6px 0 0;">Voucher de reserva confirmada</p>
+        </div>
+
+        <div style="padding:28px;">
+          <h2 style="color:#061b3a; margin-top:0;">Reserva confirmada</h2>
+          <p>Hola <strong>${reserva.nombreCliente}</strong>, tu pago fue aprobado correctamente.</p>
+
+          <div style="background:#ecfdf5; color:#166534; padding:14px 18px; border-radius:12px; font-weight:bold; margin:20px 0;">
+            Estado: Reserva confirmada y pago aprobado
+          </div>
+
+          <table style="width:100%; border-collapse:collapse;">
+            <tr>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;"><strong>Código de reserva</strong></td>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;">${codigoReserva}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;"><strong>Servicio</strong></td>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;">${reserva.servicio}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;"><strong>Cliente</strong></td>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;">${reserva.nombreCliente}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;"><strong>Correo</strong></td>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;">${reserva.emailCliente}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;"><strong>Teléfono</strong></td>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;">${reserva.telefonoCliente || 'No informado'}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;"><strong>Fechas</strong></td>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;">${reserva.fechaInicio} al ${reserva.fechaFin}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;"><strong>Personas</strong></td>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;">${reserva.personas || 'No informado'}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;"><strong>Monto pagado</strong></td>
+              <td style="padding:12px; border-bottom:1px solid #e5e7eb;">$${montoVoucher}</td>
+            </tr>
+            <tr>
+              <td style="padding:12px;"><strong>Fecha de emisión</strong></td>
+              <td style="padding:12px;">${fechaEmision}</td>
+            </tr>
+          </table>
+
+          <p style="margin-top:24px; color:#475569;">
+            Presenta este voucher como comprobante de tu reserva. Ante cualquier duda, contacta al equipo de TurismoGO.
+          </p>
+
+          <p style="color:#061b3a; font-weight:bold;">Equipo TurismoGO</p>
+        </div>
+      </div>
+    </div>
   `
 });
 
