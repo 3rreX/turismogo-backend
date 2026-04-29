@@ -1344,6 +1344,23 @@ if (fechaFin < fechaInicio) {
       });
     }
 
+    const conflictoReserva = await Reserva.findOne({
+  servicioId: servicio._id,
+  estado: { $in: ['pendiente', 'confirmada'] },
+  $or: [
+    {
+      fechaInicio: { $lte: fechaFin },
+      fechaFin: { $gte: fechaInicio }
+    }
+  ]
+});
+
+if (conflictoReserva) {
+  return res.status(400).json({
+    error: 'Este servicio no está disponible para las fechas seleccionadas'
+  });
+}
+
     const nuevaReserva = new Reserva({
       usuarioId: null,
       servicioId: servicio._id,
