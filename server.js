@@ -11,6 +11,7 @@ const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 const nodemailer = require('nodemailer');
 const { WebpayPlus, Options, IntegrationApiKeys, IntegrationCommerceCodes, Environment } = require('transbank-sdk');
+const sanitizeHtml = require('sanitize-html');
 const webpayTransaction = new WebpayPlus.Transaction(
   new Options(
     IntegrationCommerceCodes.WEBPAY_PLUS,
@@ -66,7 +67,13 @@ const upload = multer({
 
 function limpiarTexto(valor, max = 120) {
   if (typeof valor !== 'string') return '';
-  return valor.trim().slice(0, max);
+
+  const textoLimpio = sanitizeHtml(valor, {
+    allowedTags: [],
+    allowedAttributes: {}
+  });
+
+  return textoLimpio.trim().slice(0, max);
 }
 
 function esEmailValido(email) {
@@ -97,23 +104,6 @@ function subirBufferACloudinary(fileBuffer) {
 
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
-  function limpiarTexto(valor, max = 120) {
-  if (typeof valor !== 'string') return '';
-  return valor.trim().slice(0, max);
-}
-
-function esEmailValido(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function esFechaValida(fecha) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(fecha);
-}
-
-function esPrecioValido(precio) {
-  const numero = Number(precio);
-  return Number.isFinite(numero) && numero > 0;
-}
 }
 function obtenerPublicIdCloudinary(imagenUrl) {
   try {
@@ -152,7 +142,7 @@ app.use(globalLimiter);
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 8,
+  max: 5,
   message: {
     error: 'Demasiados intentos de login. Intenta nuevamente más tarde.'
   },
@@ -160,13 +150,21 @@ const loginLimiter = rateLimit({
   legacyHeaders: false
 });
 
-app.use(cors({
-  origin: [
+const allowedOrigins = [
   'http://127.0.0.1:5500',
   'http://localhost:5500',
   'https://turismogo-frontend.vercel.app',
   'https://www.turismogochile.com'
-]
+];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('Origen no permitido por CORS'));
+  }
 }));
 // =========================
 // MODELOS
@@ -1019,6 +1017,13 @@ app.put('/api/admin/usuarios/:id/role', authMiddleware, adminMiddleware, async (
 app.put('/api/admin/usuarios/:id/suscripcion', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { suscripcionActiva, plan } = req.body;
+    const planesValidos = ['ninguno', 'basico', 'pro', 'premium'];
+
+if (!planesValidos.includes(plan)) {
+  return res.status(400).json({
+    error: 'Plan inválido'
+  });
+}
 
     const usuario = await Usuario.findById(req.params.id).select('-password');
 
