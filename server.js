@@ -392,6 +392,35 @@ const Pago = mongoose.model('Pago', pagoSchema);
 
 const Usuario = mongoose.model('Usuario', usuarioSchema);
 const Servicio = mongoose.model('Servicio', servicioSchema);
+const auditoriaSchema = new mongoose.Schema({
+  adminId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    required: true
+  },
+  accion: {
+    type: String,
+    required: true
+  },
+  entidad: {
+    type: String,
+    required: true
+  },
+  entidadId: {
+    type: String,
+    default: ''
+  },
+  detalle: {
+    type: String,
+    default: ''
+  },
+  fecha: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const Auditoria = mongoose.model('Auditoria', auditoriaSchema);
 
 
 // =========================
@@ -454,7 +483,21 @@ function adminMiddleware(req, res, next) {
 
   return res.status(403).json({ error: 'Acceso solo para administradores' });
 }
+async function registrarAuditoria({ req, accion, entidad, entidadId = '', detalle = '' }) {
+  try {
+    if (!req.user || !req.user.id) return;
 
+    await Auditoria.create({
+      adminId: req.user.id,
+      accion,
+      entidad,
+      entidadId,
+      detalle
+    });
+  } catch (error) {
+    console.error('Error registrando auditoría:', error);
+  }
+}
 // =========================
 // RUTAS
 // =========================
@@ -993,6 +1036,21 @@ app.get('/api/admin/reservas', authMiddleware, adminMiddleware, async (req, res)
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.get('/api/admin/auditoria', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const registros = await Auditoria.find()
+      .populate('adminId', 'username role')
+      .sort({ fecha: -1 })
+      .limit(100);
+
+    res.json(registros);
+  } catch (error) {
+    console.error('Error obteniendo auditoría:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor'
+    });
+  }
+});
 app.put('/api/admin/usuarios/:id/role', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { role } = req.body;
@@ -1009,6 +1067,13 @@ app.put('/api/admin/usuarios/:id/role', authMiddleware, adminMiddleware, async (
 
     usuario.role = role;
     await usuario.save();
+    await registrarAuditoria({
+  req,
+  accion: 'CAMBIO_ROL_USUARIO',
+  entidad: 'Usuario',
+  entidadId: usuario._id.toString(),
+  detalle: `Usuario ${usuario.username} cambiado a rol ${role}`
+});
 
     res.json({
       message: 'Rol actualizado correctamente',
@@ -1040,6 +1105,13 @@ if (!planesValidos.includes(plan)) {
     usuario.plan = plan || (suscripcionActiva ? 'basico' : 'ninguno');
 
     await usuario.save();
+    await registrarAuditoria({
+  req,
+  accion: 'CAMBIO_SUSCRIPCION_USUARIO',
+  entidad: 'Usuario',
+  entidadId: usuario._id.toString(),
+  detalle: `Suscripción de ${usuario.username}: ${usuario.suscripcionActiva ? 'activa' : 'inactiva'} - plan ${usuario.plan}`
+});
 
     res.json({
       message: 'Suscripción actualizada correctamente',
@@ -1085,6 +1157,13 @@ app.delete('/api/admin/usuarios/:id', authMiddleware, adminMiddleware, async (re
         }
       }
     );
+    await registrarAuditoria({
+  req,
+  accion: 'ELIMINACION_USUARIO',
+  entidad: 'Usuario',
+  entidadId: usuario._id.toString(),
+  detalle: `Usuario eliminado: ${usuario.username}`
+});
 
     await Usuario.findByIdAndDelete(usuarioId);
 
