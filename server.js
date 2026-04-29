@@ -582,7 +582,9 @@ app.get('/api/profile', authMiddleware, async (req, res) => {
 // Servicios
 app.get('/api/servicios', async (req, res) => {
   try {
-    const servicios = await Servicio.find();
+    const servicios = await Servicio.find()
+      .populate('propietarioId', 'username role suscripcionActiva plan');
+
     res.json(servicios);
   } catch (error) {
     console.error('Error al obtener servicios:', error);
