@@ -314,6 +314,42 @@ const reservaSchema = new mongoose.Schema({
 });
 
 const Reserva = mongoose.model('Reserva', reservaSchema);
+
+const mensajeSchema = new mongoose.Schema({
+  servicioId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Servicio',
+    required: true
+  },
+  propietarioId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    required: true
+  },
+  nombreCliente: {
+    type: String,
+    required: true
+  },
+  emailCliente: {
+    type: String,
+    required: true
+  },
+  mensaje: {
+    type: String,
+    required: true
+  },
+  estado: {
+    type: String,
+    enum: ['nuevo', 'respondido', 'cerrado'],
+    default: 'nuevo'
+  },
+  fecha: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const Mensaje = mongoose.model('Mensaje', mensajeSchema);
   
 const pagoSchema = new mongoose.Schema({
   usuarioId: {
@@ -844,6 +880,25 @@ app.get('/api/reservas-propietario', authMiddleware, propietarioMiddleware, asyn
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+
+app.get('/api/mensajes-propietario', authMiddleware, propietarioMiddleware, async (req, res) => {
+  try {
+    const mensajes = await Mensaje.find({
+      propietarioId: req.user.id
+    })
+      .populate('servicioId', 'nombre precio imagen')
+      .sort({ fecha: -1 });
+
+    res.json(mensajes);
+
+  } catch (error) {
+    console.error('Error al obtener mensajes del propietario:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor'
+    });
+  }
+});
+
 app.put('/api/reservas/:id/cancelar', authMiddleware, async (req, res) => {
   try {
     const reserva = await Reserva.findById(req.params.id);
@@ -1248,6 +1303,60 @@ app.get('/api/servicios/:id/publico', async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+
+app.post('/api/servicios/:id/mensajes', async (req, res) => {
+  try {
+    const servicio = await Servicio.findById(req.params.id);
+
+    if (!servicio) {
+      return res.status(404).json({
+        error: 'Servicio no encontrado'
+      });
+    }
+
+    if (!servicio.propietarioId) {
+      return res.status(400).json({
+        error: 'Este servicio no tiene propietario asignado'
+      });
+    }
+
+    const nombreCliente = limpiarTexto(req.body.nombreCliente, 100);
+    const emailCliente = limpiarTexto(req.body.emailCliente, 100).toLowerCase();
+    const mensajeTexto = limpiarTexto(req.body.mensaje, 800);
+
+    if (!nombreCliente || !emailCliente || !mensajeTexto) {
+      return res.status(400).json({
+        error: 'Nombre, correo y mensaje son obligatorios'
+      });
+    }
+
+    if (!esEmailValido(emailCliente)) {
+      return res.status(400).json({
+        error: 'Correo electrónico inválido'
+      });
+    }
+
+    const nuevoMensaje = await Mensaje.create({
+      servicioId: servicio._id,
+      propietarioId: servicio.propietarioId,
+      nombreCliente,
+      emailCliente,
+      mensaje: mensajeTexto
+    });
+
+    res.json({
+      message: 'Mensaje enviado correctamente',
+      mensaje: nuevoMensaje
+    });
+
+  } catch (error) {
+    console.error('Error al enviar mensaje:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor'
+    });
+  }
+});
+
 app.post('/api/reserva-publica', async (req, res) => {
   try {
     const {
