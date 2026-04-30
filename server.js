@@ -1602,7 +1602,7 @@ if (conflictoReserva) {
 
     await nuevaReserva.save();
  
-    const buyOrder = `reserva-${Date.now()}`;
+    const buyOrder = `reserva-${nuevaReserva._id}`;
     const sessionId = `publica-${nuevaReserva._id}`;
     const amount = Number(servicio.precio);
     const returnUrl = process.env.WEBPAY_RESERVA_RETURN_URL;
