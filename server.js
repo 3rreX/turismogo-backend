@@ -774,13 +774,30 @@ app.put('/api/servicios/:id', authMiddleware, propietarioMiddleware, upload.arra
       return res.status(403).json({ error: 'No puedes editar este servicio' });
     }
 
-    const { nombre, descripcion, precio } = req.body;
+   const nombre = limpiarTexto(req.body.nombre, 120);
+const descripcion = limpiarTexto(req.body.descripcion, 800);
+const precio = req.body.precio;
 
-    if (nombre) servicio.nombre = nombre;
-    if (descripcion) servicio.descripcion = descripcion;
-    if (precio) servicio.precio = Number(precio);
+if (nombre) {
+  servicio.nombre = nombre;
+}
+
+if (descripcion) {
+  servicio.descripcion = descripcion;
+}
+
+if (precio !== undefined && precio !== null && precio !== '') {
+  if (!esPrecioValido(precio)) {
+    return res.status(400).json({
+      error: 'Precio inválido'
+    });
+  }
+
+  servicio.precio = Number(precio);
+}
 
     if (req.files && req.files.length > 0) {
+
   const nuevasImagenes = [];
 
   for (const file of req.files) {
