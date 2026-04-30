@@ -10,6 +10,7 @@ const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
 const nodemailer = require('nodemailer');
+const { fileTypeFromBuffer } = require('file-type');
 const { WebpayPlus, Options, IntegrationApiKeys, IntegrationCommerceCodes, Environment } = require('transbank-sdk');
 const sanitizeHtml = require('sanitize-html');
 const webpayTransaction = new WebpayPlus.Transaction(
@@ -94,6 +95,21 @@ function esPrecioValido(precio) {
   return Number.isFinite(numero) && numero > 0;
 }
 
+async function validarImagenReal(fileBuffer) {
+  const tipoArchivo = await fileTypeFromBuffer(fileBuffer);
+
+  if (!tipoArchivo) {
+    throw new Error('No se pudo validar el tipo de archivo');
+  }
+
+  const tiposPermitidos = ['image/jpeg', 'image/png', 'image/webp'];
+
+  if (!tiposPermitidos.includes(tipoArchivo.mime)) {
+    throw new Error('Formato de imagen no permitido. Usa JPG, PNG o WEBP');
+  }
+
+  return true;
+}
 function subirBufferACloudinary(fileBuffer) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -724,6 +740,8 @@ const precio = req.body.precio;
 const imagenesSubidas = [];
 
 for (const file of req.files) {
+  await validarImagenReal(file.buffer);
+
   const resultado = await subirBufferACloudinary(file.buffer);
   imagenesSubidas.push(resultado.secure_url);
 }
@@ -821,9 +839,11 @@ if (precio !== undefined && precio !== null && precio !== '') {
   const nuevasImagenes = [];
 
   for (const file of req.files) {
-    const resultado = await subirBufferACloudinary(file.buffer);
-    nuevasImagenes.push(resultado.secure_url);
-  }
+  await validarImagenReal(file.buffer);
+
+  const resultado = await subirBufferACloudinary(file.buffer);
+  nuevasImagenes.push(resultado.secure_url);
+}
 
   servicio.imagenes = [...(servicio.imagenes || []), ...nuevasImagenes];
 
