@@ -1568,19 +1568,16 @@ if (fechaFin < fechaInicio) {
       });
     }
 
-    const conflictoReserva = await Reserva.findOne({
+    const conflicto = await Reserva.findOne({
   servicioId: servicio._id,
-  $or: [
-    { estado: 'confirmada' },
-    { pagoEstado: 'pagado' }
-  ],
+  estado: { $in: ['pendiente', 'confirmada'] },
   fechaInicio: { $lte: fechaFin },
   fechaFin: { $gte: fechaInicio }
 });
 
-if (conflictoReserva) {
+if (conflicto) {
   return res.status(400).json({
-    error: 'Este servicio no está disponible para las fechas seleccionadas'
+    error: 'Este servicio ya está reservado en las fechas seleccionadas'
   });
 }
 
