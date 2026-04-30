@@ -1655,6 +1655,12 @@ app.get('/api/reserva-publica/retorno', async (req, res) => {
       );
     }
 
+    if (reserva.pagoEstado === 'pagado') {
+  return res.redirect(
+    `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=exitoso`
+  );
+}
+
     if (
       commitResponse.status === 'AUTHORIZED' &&
       commitResponse.response_code === 0
@@ -1707,6 +1713,11 @@ app.post('/api/reserva-publica/retorno', async (req, res) => {
         `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=error`
       );
     }
+    if (reserva.pagoEstado === 'pagado') {
+  return res.redirect(
+    `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=exitoso`
+  );
+}
 
     if (
   commitResponse.status === 'AUTHORIZED' &&
