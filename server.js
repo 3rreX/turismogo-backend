@@ -1884,6 +1884,41 @@ app.post('/api/reserva-publica/retorno', async (req, res) => {
     );
   }
 });
+// =========================
+// MANEJO GLOBAL DE ERRORES
+// =========================
+
+app.use((err, req, res, next) => {
+  console.error('Error global:', err);
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        error: 'La imagen supera el tamaño máximo permitido de 8 MB'
+      });
+    }
+
+    return res.status(400).json({
+      error: 'Error al procesar la imagen'
+    });
+  }
+
+  if (err.message === 'Solo se permiten archivos de imagen') {
+    return res.status(400).json({
+      error: 'Solo se permiten archivos de imagen'
+    });
+  }
+
+  if (err.message === 'Origen no permitido por CORS') {
+    return res.status(403).json({
+      error: 'Origen no permitido'
+    });
+  }
+
+  return res.status(500).json({
+    error: 'Error interno del servidor'
+  });
+});
 
 // =========================
 // CONEXIÓN MONGODB + SERVER
