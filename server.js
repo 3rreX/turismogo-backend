@@ -201,18 +201,18 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    const isProduction = process.env.NODE_ENV === 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
 
-    if (!origin && !isProduction) {
-      return callback(null, true);
-    }
+  if (!origin) {
+    return callback(null, true);
+  }
 
-    if (origin && allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+  if (origin && allowedOrigins.includes(origin)) {
+    return callback(null, true);
+  }
 
-    return callback(new Error('Origen no permitido por CORS'));
-  },
+  return callback(new Error('Origen no permitido por CORS'));
+},
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
