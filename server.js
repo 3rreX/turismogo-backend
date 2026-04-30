@@ -679,7 +679,7 @@ const token = jwt.sign(
     role: usuario.role
   },
   process.env.JWT_SECRET,
-  { expiresIn: '7d' }
+  { expiresIn: '12h' }
 );
 
     res.json({ token });
