@@ -1244,7 +1244,7 @@ app.delete('/api/admin/usuarios/:id', authMiddleware, adminMiddleware, async (re
     });
   }
 });
-app.put('/api/mi-suscripcion', authMiddleware, async (req, res) => {
+app.put('/api/mi-suscripcion', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const { plan } = req.body;
 
@@ -1259,8 +1259,10 @@ app.put('/api/mi-suscripcion', authMiddleware, async (req, res) => {
     }
 
     if (usuario.role !== 'propietario' && usuario.role !== 'admin') {
-      return res.status(403).json({ error: 'Solo propietarios pueden activar suscripción' });
-    }
+  return res.status(403).json({
+    error: 'Solo se puede activar suscripción a propietarios o administradores'
+  });
+}
 
     usuario.suscripcionActiva = true;
     usuario.plan = plan;
