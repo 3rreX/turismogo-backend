@@ -1524,61 +1524,6 @@ app.post('/api/servicios/:id/mensajes', messageLimiter, async (req, res) => {
   }
 });
 
-app.post('/api/reserva-publica', publicActionLimiter, async (req, res) => {
-  try {
-    const {
-  servicioId,
-  fechaInicio,
-  fechaFin,
-  personas,
-  nombreCliente,
-  emailCliente,
-  telefonoCliente,
-  mensajeCliente
-} = req.body;
-
-    if (!servicioId || !fechaInicio || !fechaFin || !nombreCliente || !emailCliente) {
-  return res.status(400).json({
-    error: 'Nombre, correo, fechas y servicio son obligatorios'
-  });
-}
-
-    const servicio = await Servicio.findById(servicioId);
-
-    if (!servicio) {
-      return res.status(404).json({
-        error: 'Servicio no encontrado'
-      });
-    }
-
-    const nuevaReserva = new Reserva({
-      usuarioId: null,
-      servicio: servicio.nombre,
-      servicioId: servicio._id,
-      fechaInicio,
-      fechaFin,
-      nombreCliente,
-      emailCliente,
-      telefonoCliente,
-      personas,
-      mensajeCliente,
-      estado: 'pendiente'
-    });
-
-    await nuevaReserva.save();
-
-    res.json({
-      message: 'Reserva registrada correctamente',
-      reserva: nuevaReserva
-    });
-
-   } catch (error) {
-    console.error('Error en reserva pública:', error);
-    res.status(500).json({
-      error: 'Error interno del servidor'
-    });
-  }
-});
   app.post('/api/reserva-publica/pagar', publicActionLimiter, async (req, res) => {
   try {
     const servicioId = limpiarTexto(req.body.servicioId, 80);
