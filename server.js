@@ -1829,41 +1829,7 @@ const PORT = process.env.PORT || 3000;
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log('✅ Conectado a MongoDB');
-        const adminExistente = await Usuario.findOne({ username: 'admin' });
-
-    if (adminExistente) {
-      adminExistente.role = 'admin';
-      await adminExistente.save();
-      console.log('✅ Usuario admin actualizado a role admin');
-    }
-
-    const propietarioExistente = await Usuario.findOne({ username: 'propietario1' });
-
-    if (!propietarioExistente) {
-      const hashedPasswordProp = await bcrypt.hash('1234', 10);
-
-      await Usuario.create({
-        username: 'propietario1',
-        password: hashedPasswordProp,
-        role: 'propietario'
-      });
-
-      console.log('✅ Usuario propietario1 creado');
-    }
-
-    const existeAdmin = await Usuario.findOne({ username: 'admin' });
-
-    if (!existeAdmin) {
-      const hashedPassword = await bcrypt.hash('1234', 10);
-
-      await Usuario.create({
-        username: 'admin',
-        password: hashedPassword
-      });
-
-      console.log('✅ Usuario admin creado');
-    }
-
+       
     // Cargar servicios iniciales si la colección está vacía
     const totalServicios = await Servicio.countDocuments();
 
