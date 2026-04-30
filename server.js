@@ -1801,6 +1801,22 @@ app.post('/api/reserva-publica/retorno', async (req, res) => {
     </div>
   `
 });
+await enviarCorreo({
+  to: process.env.EMAIL_USER,
+  subject: `Nueva reserva pagada ${codigoReserva} - TurismoGO`,
+  html: `
+    <h2>Nueva reserva pagada</h2>
+    <p><strong>Código:</strong> ${codigoReserva}</p>
+    <p><strong>Cliente:</strong> ${reserva.nombreCliente}</p>
+    <p><strong>Email:</strong> ${reserva.emailCliente}</p>
+    <p><strong>Teléfono:</strong> ${reserva.telefonoCliente || 'No informado'}</p>
+    <p><strong>Servicio:</strong> ${reserva.servicio}</p>
+    <p><strong>Fechas:</strong> ${reserva.fechaInicio} al ${reserva.fechaFin}</p>
+    <p><strong>Personas:</strong> ${reserva.personas || 'No informado'}</p>
+    <p><strong>Monto pagado:</strong> $${montoVoucher}</p>
+    <p><strong>Mensaje:</strong> ${reserva.mensajeCliente || 'Sin mensaje adicional'}</p>
+  `
+});
 
       return res.redirect(
         `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=exitoso`
