@@ -1348,8 +1348,9 @@ app.post('/api/webpay/crear', authMiddleware, async (req, res) => {
 });
 app.get('/api/webpay/retorno', async (req, res) => {
   try {
-    console.log('GET RETORNO PLAN QUERY:', req.query);
-
+    if (process.env.NODE_ENV !== 'production') {
+  console.log('GET RETORNO PLAN QUERY:', req.query);
+}
     const token = req.query.token_ws;
 
     if (!token) {
@@ -1358,7 +1359,9 @@ app.get('/api/webpay/retorno', async (req, res) => {
 
     const commitResponse = await webpayTransaction.commit(token);
 
-    console.log('RESPUESTA WEBPAY PLAN GET:', commitResponse);
+    if (process.env.NODE_ENV !== 'production') {
+  console.log('RESPUESTA WEBPAY PLAN GET:', commitResponse);
+}
 
     const pago = await Pago.findOne({ token });
 
@@ -1406,7 +1409,9 @@ app.post('/api/webpay/retorno', async (req, res) => {
     }
 
     const commitResponse = await webpayTransaction.commit(token);
-    console.log('RESPUESTA WEBPAY PLAN:', commitResponse);
+    if (process.env.NODE_ENV !== 'production') {
+  console.log('RESPUESTA WEBPAY PLAN:', commitResponse);
+}
 
     const pago = await Pago.findOne({ token });
 
@@ -1628,7 +1633,9 @@ if (conflicto) {
 });
 app.get('/api/reserva-publica/retorno', async (req, res) => {
   try {
-    console.log('GET RETORNO RESERVA QUERY:', req.query);
+    if (process.env.NODE_ENV !== 'production') {
+  console.log('GET RETORNO RESERVA QUERY:', req.query);
+}
 
     const token = req.query.token_ws;
 
@@ -1640,7 +1647,9 @@ app.get('/api/reserva-publica/retorno', async (req, res) => {
 
     const commitResponse = await webpayTransaction.commit(token);
 
-    console.log('RESPUESTA WEBPAY RESERVA GET:', commitResponse);
+    if (process.env.NODE_ENV !== 'production') {
+  console.log('RESPUESTA WEBPAY RESERVA GET:', commitResponse);
+}
 
     const reserva = await Reserva.findOne({
       tokenPago: token
@@ -1699,7 +1708,9 @@ app.post('/api/reserva-publica/retorno', async (req, res) => {
     }
 
     const commitResponse = await webpayTransaction.commit(token);
-    console.log('RESPUESTA WEBPAY RESERVA:', commitResponse);
+    if (process.env.NODE_ENV !== 'production') {
+  console.log('RESPUESTA WEBPAY RESERVA:', commitResponse);
+}
 
     const reserva = await Reserva.findOne({
       tokenPago: token
