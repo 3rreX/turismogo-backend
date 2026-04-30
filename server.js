@@ -155,6 +155,26 @@ const loginLimiter = rateLimit({
   legacyHeaders: false
 });
 
+const publicActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: {
+    error: 'Demasiadas solicitudes. Intenta nuevamente en unos minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const messageLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    error: 'Demasiados mensajes enviados. Intenta nuevamente más tarde.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 const allowedOrigins = [
   'http://127.0.0.1:5500',
   'http://localhost:5500',
@@ -1410,7 +1430,7 @@ app.get('/api/servicios/:id/publico', async (req, res) => {
   }
 });
 
-app.post('/api/servicios/:id/mensajes', async (req, res) => {
+app.post('/api/servicios/:id/mensajes', messageLimiter, async (req, res) => {
   try {
     const servicio = await Servicio.findById(req.params.id);
 
@@ -1463,7 +1483,7 @@ app.post('/api/servicios/:id/mensajes', async (req, res) => {
   }
 });
 
-app.post('/api/reserva-publica', async (req, res) => {
+app.post('/api/reserva-publica', publicActionLimiter, async (req, res) => {
   try {
     const {
   servicioId,
@@ -1518,7 +1538,7 @@ app.post('/api/reserva-publica', async (req, res) => {
     });
   }
 });
-  app.post('/api/reserva-publica/pagar', async (req, res) => {
+  app.post('/api/reserva-publica/pagar', publicActionLimiter, async (req, res) => {
   try {
     const servicioId = limpiarTexto(req.body.servicioId, 80);
     const fechaInicio = limpiarTexto(req.body.fechaInicio, 20);
