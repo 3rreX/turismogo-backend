@@ -920,18 +920,29 @@ app.post('/api/reservas', authMiddleware, async (req, res) => {
     const { servicio, fechaInicio, fechaFin } = req.body;
 
     if (!servicio || !fechaInicio || !fechaFin) {
-      return res.status(400).json({ error: 'Todos los campos son obligatorios' });
-    }
+  return res.status(400).json({
+    error: 'Servicio, fecha de inicio y fecha final son obligatorios'
+  });
+}
+
+if (!esFechaValida(fechaInicio) || !esFechaValida(fechaFin)) {
+  return res.status(400).json({
+    error: 'Formato de fecha inválido'
+  });
+}
+
+if (fechaFin < fechaInicio) {
+  return res.status(400).json({
+    error: 'La fecha final no puede ser menor a la fecha inicial'
+  });
+}
 
     const conflicto = await Reserva.findOne({
-      servicio,
-      $or: [
-        {
-          fechaInicio: { $lte: fechaFin },
-          fechaFin: { $gte: fechaInicio }
-        }
-      ]
-    });
+  servicio,
+  estado: { $in: ['pendiente', 'confirmada'] },
+  fechaInicio: { $lte: fechaFin },
+  fechaFin: { $gte: fechaInicio }
+});
 
     if (conflicto) {
       return res.status(400).json({ error: 'Ese servicio ya está reservado en esas fechas' });
