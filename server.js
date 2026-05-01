@@ -1693,20 +1693,44 @@ app.get('/api/reserva-publica/retorno', async (req, res) => {
   );
 }
 
-    if (
-      commitResponse.status === 'AUTHORIZED' &&
-      commitResponse.response_code === 0
-    ) {
-      reserva.pagoEstado = 'pagado';
-      reserva.estado = 'confirmada';
-      reserva.montoPagado = commitResponse.amount || reserva.montoPagado;
+  if (
+  commitResponse.status === 'AUTHORIZED' &&
+  commitResponse.response_code === 0
+) {
+  reserva.pagoEstado = 'pagado';
+  reserva.estado = 'confirmada';
+  reserva.montoPagado = commitResponse.amount || reserva.montoPagado;
 
-      await reserva.save();
+  await reserva.save();
 
-      return res.redirect(
-        `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=exitoso`
-      );
-    }
+  // 🔥 GENERAR DATOS VOUCHER
+  const codigoReserva = `TG-${reserva._id.toString().slice(-6).toUpperCase()}`;
+  const fechaEmision = new Date().toLocaleDateString('es-CL');
+  const montoVoucher = Number(reserva.montoPagado || 0).toLocaleString('es-CL');
+
+  // 🔥 ENVIAR CORREO AL CLIENTE
+  await enviarCorreo({
+    to: reserva.emailCliente,
+    subject: `Voucher de reserva confirmada ${codigoReserva} - TurismoGO`,
+    html: `
+      <h2>Reserva confirmada</h2>
+      <p><strong>Código:</strong> ${codigoReserva}</p>
+      <p><strong>Servicio:</strong> ${reserva.servicio}</p>
+      <p><strong>Cliente:</strong> ${reserva.nombreCliente}</p>
+      <p><strong>Email:</strong> ${reserva.emailCliente}</p>
+      <p><strong>Teléfono:</strong> ${reserva.telefonoCliente || 'No informado'}</p>
+      <p><strong>Fechas:</strong> ${reserva.fechaInicio} al ${reserva.fechaFin}</p>
+      <p><strong>Monto pagado:</strong> $${montoVoucher}</p>
+      <p><strong>Fecha emisión:</strong> ${fechaEmision}</p>
+    `
+  });
+
+  console.log('📧 Voucher enviado (GET retorno):', reserva.emailCliente);
+
+  return res.redirect(
+    `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=exitoso`
+  );
+}
 
     reserva.pagoEstado = 'fallido';
     await reserva.save();
