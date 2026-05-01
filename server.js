@@ -551,6 +551,15 @@ app.get('/', (req, res) => {
   res.send('API funcionando');
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'TurismoGO API',
+    environment: process.env.NODE_ENV || 'development',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Registro
 app.post('/api/register', async (req, res) => {
   try {
