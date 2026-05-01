@@ -1895,34 +1895,6 @@ mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log('✅ Conectado a MongoDB');
        
-    // Cargar servicios iniciales si la colección está vacía
-    const totalServicios = await Servicio.countDocuments();
-
-    if (totalServicios === 0) {
-      await Servicio.insertMany([
-        {
-          nombre: 'Cabaña en Puerto Natales',
-          descripcion: 'Alojamiento cómodo con vista panorámica.',
-          precio: 65000,
-          imagen: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85'
-        },
-        {
-          nombre: 'Arriendo de Jeep 4x4',
-          descripcion: 'Vehículo ideal para rutas turísticas y aventura.',
-          precio: 90000,
-          imagen: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70'
-        },
-        {
-          nombre: 'Tour Glaciar',
-          descripcion: 'Excursión guiada de día completo.',
-          precio: 45000,
-          imagen: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b'
-        }
-      ]);
-
-      console.log('✅ Servicios de prueba insertados');
-    }
-
     app.listen(PORT, () => {
       console.log(`🚀 Servidor en http://localhost:${PORT}`);
     });
