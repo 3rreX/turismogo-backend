@@ -42,16 +42,33 @@ const transporter = nodemailer.createTransport({
 
 async function enviarCorreo({ to, subject, html }) {
   try {
-    if (!to) return;
+    if (!to) {
+      console.warn('Correo no enviado: destinatario vacío');
+      return;
+    }
 
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to,
       subject,
       html
     });
+
+    console.log('Correo enviado correctamente:', {
+      to,
+      subject,
+      messageId: info.messageId,
+      accepted: info.accepted,
+      rejected: info.rejected
+    });
+
   } catch (error) {
-    console.error('Error al enviar correo:', error);
+    console.error('Error al enviar correo:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response
+    });
   }
 }
 
