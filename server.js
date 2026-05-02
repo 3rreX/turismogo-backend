@@ -1,4 +1,35 @@
 require('dotenv').config();
+// =========================
+// VALIDACIÓN VARIABLES ENTORNO
+// =========================
+
+const requiredEnv = [
+  'MONGO_URI',
+  'JWT_SECRET',
+  'FRONTEND_URL',
+
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
+
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_USER',
+  'SMTP_PASS',
+
+  'WEBPAY_PLAN_RETURN_URL',
+  'WEBPAY_RESERVA_RETURN_URL'
+];
+
+const missingEnv = requiredEnv.filter(env => !process.env[env]);
+
+if (missingEnv.length > 0) {
+  console.error('❌ FALTAN VARIABLES DE ENTORNO CRÍTICAS:');
+  missingEnv.forEach(env => console.error(`- ${env}`));
+
+  console.error('\n⚠️ El servidor no se iniciará por seguridad.\n');
+  process.exit(1);
+}
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
