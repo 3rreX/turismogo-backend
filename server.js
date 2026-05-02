@@ -257,6 +257,16 @@ const globalLimiter = rateLimit({
   legacyHeaders: false
 });
 
+const webpayLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 min
+  max: 10,
+  message: {
+    error: 'Demasiadas solicitudes de pago. Intenta nuevamente más tarde.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
 app.use(globalLimiter);
 
 const loginLimiter = rateLimit({
@@ -264,6 +274,16 @@ const loginLimiter = rateLimit({
   max: 5,
   message: {
     error: 'Demasiados intentos de login. Intenta nuevamente más tarde.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5,
+  message: {
+    error: 'Demasiados registros desde esta IP. Intenta más tarde.'
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -280,10 +300,10 @@ const publicActionLimiter = rateLimit({
 });
 
 const messageLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 5,
   message: {
-    error: 'Demasiados mensajes enviados. Intenta nuevamente más tarde.'
+    error: 'Demasiados registros desde esta IP. Intenta más tarde.'
   },
   standardHeaders: true,
   legacyHeaders: false
@@ -659,7 +679,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Registro
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', registerLimiter, async (req, res) => {
   try {
     const username = limpiarTexto(req.body.username, 60);
 const password = limpiarTexto(req.body.password, 100);
@@ -695,7 +715,7 @@ const password = limpiarTexto(req.body.password, 100);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
-app.post('/api/register-propietario', async (req, res) => {
+app.post('/api/register-propietario', registerLimiter, async (req, res) => {
   try {
     const nombreCompleto = limpiarTexto(req.body.nombreCompleto, 100);
 const telefono = limpiarTexto(req.body.telefono, 30);
@@ -1397,7 +1417,7 @@ app.put('/api/mi-suscripcion', authMiddleware, adminMiddleware, async (req, res)
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
-app.post('/api/webpay/crear', authMiddleware, async (req, res) => {
+app.post('/api/webpay/crear', webpayLimiter, authMiddleware, async (req, res) => {
   try {
     const { plan } = req.body;
 
@@ -1637,7 +1657,7 @@ app.post('/api/servicios/:id/mensajes', messageLimiter, async (req, res) => {
   }
 });
 
-  app.post('/api/reserva-publica/pagar', publicActionLimiter, async (req, res) => {
+  app.post('/api/reserva-publica/pagar', webpayLimiter, publicActionLimiter, publicActionLimiter, async (req, res) => {
   try {
     const servicioId = limpiarTexto(req.body.servicioId, 80);
     const fechaInicio = limpiarTexto(req.body.fechaInicio, 20);
