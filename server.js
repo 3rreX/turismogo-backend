@@ -168,7 +168,48 @@ function obtenerPublicIdCloudinary(imagenUrl) {
 
 // Middlewares
 app.use(helmet({
-  crossOriginResourcePolicy: false
+  crossOriginResourcePolicy: false,
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      "img-src": [
+        "'self'",
+        "data:",
+        "https://res.cloudinary.com",
+        "https://placehold.co"
+      ],
+      "script-src": [
+        "'self'",
+        "https://cdn.jsdelivr.net"
+      ],
+      "style-src": [
+        "'self'",
+        "'unsafe-inline'",
+        "https://fonts.googleapis.com"
+      ],
+      "font-src": [
+        "'self'",
+        "https://fonts.gstatic.com"
+      ],
+      "connect-src": [
+        "'self'",
+        "https://www.turismogochile.com",
+        "https://turismogochile.com",
+        "https://turismogo-frontend.vercel.app"
+      ],
+      "frame-src": [
+        "'self'",
+        "https://webpay3g.transbank.cl",
+        "https://webpay3gint.transbank.cl"
+      ],
+      "form-action": [
+        "'self'",
+        "https://webpay3g.transbank.cl",
+        "https://webpay3gint.transbank.cl"
+      ]
+    }
+  }
 }));
 
 app.use(express.json({
