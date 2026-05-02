@@ -130,9 +130,18 @@ async function validarImagenReal(fileBuffer) {
 function subirBufferACloudinary(fileBuffer) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      {
-        folder: 'turismogo',
-        resource_type: 'image'
+   {
+  folder: 'turismogo',
+  resource_type: 'image',
+  transformation: [
+    {
+      width: 1600,
+      height: 1200,
+      crop: 'limit',
+      quality: 'auto',
+      fetch_format: 'auto'
+    }
+  ]
       },
       (error, result) => {
         if (error) return reject(error);
