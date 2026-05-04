@@ -44,7 +44,6 @@ const nodemailer = require('nodemailer');
 const { fileTypeFromBuffer } = require('file-type');
 const { WebpayPlus, Options, IntegrationApiKeys, IntegrationCommerceCodes, Environment } = require('transbank-sdk');
 const sanitizeHtml = require('sanitize-html');
-const mongoSanitize = require('express-mongo-sanitize');
 const webpayTransaction = new WebpayPlus.Transaction(
   new Options(
     IntegrationCommerceCodes.WEBPAY_PLUS,
@@ -120,6 +119,29 @@ const upload = multer({
   }
 });
 
+function bloquearOperadoresMongo(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+
+  for (const key of Object.keys(obj)) {
+    if (key.startsWith('$') || key.includes('.')) {
+      delete obj[key];
+      continue;
+    }
+
+    if (typeof obj[key] === 'object') {
+      bloquearOperadoresMongo(obj[key]);
+    }
+  }
+
+  return obj;
+}
+
+function mongoSanitizeManual(req, res, next) {
+  if (req.body) bloquearOperadoresMongo(req.body);
+  if (req.params) bloquearOperadoresMongo(req.params);
+
+  next();
+}
 function limpiarTexto(valor, max = 120) {
   if (typeof valor !== 'string') return '';
 
@@ -248,7 +270,7 @@ app.use(express.json({
   limit: '1mb'
 }));
 
-app.use(mongoSanitize());
+app.use(mongoSanitizeManual);
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
