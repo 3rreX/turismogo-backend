@@ -377,7 +377,13 @@ email: {
     type: String,
     enum: ['ninguno', 'basico', 'pro', 'premium'],
     default: 'ninguno'
-  }
+  },
+
+  tokenVersion: {
+  type: Number,
+  default: 0
+}
+
 });
 const servicioSchema = new mongoose.Schema({
   nombre: {
@@ -593,7 +599,7 @@ const Auditoria = mongoose.model('Auditoria', auditoriaSchema);
 // MIDDLEWARE AUTH
 // =========================
 
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
   try {
     const authHeader = req.headers.authorization;
 
@@ -621,6 +627,18 @@ function authMiddleware(req, res, next) {
       token,
       process.env.JWT_SECRET
     );
+
+    const usuario = await Usuario.findById(decoded.id);
+
+if (!usuario) {
+  return res.status(401).json({ error: 'Usuario no válido' });
+}
+
+if (usuario.tokenVersion !== decoded.tokenVersion) {
+  return res.status(401).json({
+    error: 'Sesión inválida, vuelve a iniciar sesión'
+  });
+}
 
     req.user = decoded;
 
@@ -807,10 +825,11 @@ const token = jwt.sign(
   {
     id: usuario._id,
     username: usuario.username,
-    role: usuario.role
+    role: usuario.role,
+    tokenVersion: usuario.tokenVersion
   },
   process.env.JWT_SECRET,
-  { expiresIn: '12h' }
+  { expiresIn: '4h' }
 );
 
     res.json({ token });
