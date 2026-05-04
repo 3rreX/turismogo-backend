@@ -827,21 +827,23 @@ const password = limpiarTexto(req.body.password, 100);
 
 if (!username || !password) {
   return res.status(400).json({
-    error: 'Usuario y contraseña son obligatorios'
+    error: 'Credenciales inválidas'
   });
 }
 
     const usuario = await Usuario.findOne({ username });
 
-    if (!usuario) {
-      return res.status(400).json({ error: 'Usuario no encontrado' });
-    }
+   if (!usuario) {
+  await new Promise(r => setTimeout(r, 500));
+  return res.status(400).json({ error: 'Credenciales inválidas' });
+}
 
-    const passwordValida = await bcrypt.compare(password, usuario.password);
+const passwordValida = await bcrypt.compare(password, usuario.password);
 
-    if (!passwordValida) {
-      return res.status(400).json({ error: 'Contraseña incorrecta' });
-    }
+if (!passwordValida) {
+  await new Promise(r => setTimeout(r, 500));
+  return res.status(400).json({ error: 'Credenciales inválidas' });
+}
 
 const token = jwt.sign(
   {
