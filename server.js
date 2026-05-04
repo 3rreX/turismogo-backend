@@ -882,10 +882,29 @@ app.get('/api/profile', authMiddleware, async (req, res) => {
 // Servicios
 app.get('/api/servicios', async (req, res) => {
   try {
-    const servicios = await Servicio.find()
-      .populate('propietarioId', 'username role suscripcionActiva plan');
+    const limite = Math.min(Number(req.query.limit) || 24, 50);
 
-    res.json(servicios);
+    const servicios = await Servicio.find()
+      .select('nombre descripcion precio imagen imagenes propietarioId')
+      .populate('propietarioId', 'username role suscripcionActiva plan')
+      .sort({ _id: -1 })
+      .limit(limite)
+      .lean();
+
+    const serviciosDisponibles = servicios.filter(servicio => {
+      if (!servicio.propietarioId) return false;
+
+      if (
+        servicio.propietarioId.role === 'propietario' &&
+        !servicio.propietarioId.suscripcionActiva
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+
+    res.json(serviciosDisponibles);
   } catch (error) {
     console.error('Error al obtener servicios:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
