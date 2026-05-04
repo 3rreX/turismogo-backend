@@ -44,6 +44,7 @@ const nodemailer = require('nodemailer');
 const { fileTypeFromBuffer } = require('file-type');
 const { WebpayPlus, Options, IntegrationApiKeys, IntegrationCommerceCodes, Environment } = require('transbank-sdk');
 const sanitizeHtml = require('sanitize-html');
+const mongoSanitize = require('express-mongo-sanitize');
 const webpayTransaction = new WebpayPlus.Transaction(
   new Options(
     IntegrationCommerceCodes.WEBPAY_PLUS,
@@ -244,8 +245,10 @@ app.use(helmet({
 }));
 
 app.use(express.json({
-  limit: '10mb'
+  limit: '1mb'
 }));
+
+app.use(mongoSanitize());
 
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
@@ -1657,7 +1660,7 @@ app.post('/api/servicios/:id/mensajes', messageLimiter, async (req, res) => {
   }
 });
 
-  app.post('/api/reserva-publica/pagar', webpayLimiter, publicActionLimiter, publicActionLimiter, async (req, res) => {
+  app.post('/api/reserva-publica/pagar', webpayLimiter, publicActionLimiter, async (req, res) => {
   try {
     const servicioId = limpiarTexto(req.body.servicioId, 80);
     const fechaInicio = limpiarTexto(req.body.fechaInicio, 20);
