@@ -166,6 +166,31 @@ function esPrecioValido(precio) {
   return Number.isFinite(numero) && numero > 0;
 }
 
+function obtenerPorcentajeComision(plan) {
+  const comisiones = {
+    basico: 10,
+    pro: 8,
+    premium: 6,
+    ninguno: 10
+  };
+
+  return comisiones[plan] || 10;
+}
+
+function calcularComisionTurismoGO(monto, plan) {
+  const montoNumerico = Number(monto);
+  const porcentaje = obtenerPorcentajeComision(plan);
+
+  const comision = Math.round((montoNumerico * porcentaje) / 100);
+  const montoPropietario = montoNumerico - comision;
+
+  return {
+    porcentaje,
+    comision,
+    montoPropietario
+  };
+}
+
 async function validarImagenReal(fileBuffer) {
   const tipoArchivo = await fileTypeFromBuffer(fileBuffer);
 
@@ -502,6 +527,21 @@ const reservaSchema = new mongoose.Schema({
   type: String,
   default: ''
   },
+
+  comisionPorcentaje: {
+  type: Number,
+  default: 0
+},
+
+comisionTurismoGO: {
+  type: Number,
+  default: 0
+},
+
+montoPropietario: {
+  type: Number,
+  default: 0
+},
 
   estado: {
     type: String,
@@ -1757,7 +1797,8 @@ if (fechaFin < fechaInicio) {
   });
 }
 
-    const servicio = await Servicio.findById(servicioId);
+    const servicio = await Servicio.findById(servicioId)
+  .populate('propietarioId', 'username role suscripcionActiva plan');
 
     if (!servicio) {
       return res.status(404).json({
@@ -1778,6 +1819,11 @@ if (conflicto) {
   });
 }
 
+const calculoComision = calcularComisionTurismoGO(
+  servicio.precio,
+  servicio.propietarioId?.plan || 'ninguno'
+);
+
     const nuevaReserva = new Reserva({
       usuarioId: null,
       servicioId: servicio._id,
@@ -1790,6 +1836,9 @@ if (conflicto) {
       telefonoCliente,
       mensajeCliente,
       montoPagado: servicio.precio,
+      comisionPorcentaje: calculoComision.porcentaje,
+      comisionTurismoGO: calculoComision.comision,
+      montoPropietario: calculoComision.montoPropietario,
       pagoEstado: 'pendiente',
       estado: 'pendiente'
     });
