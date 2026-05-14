@@ -4,6 +4,7 @@ require('dotenv').config();
 // =========================
 
 const requiredEnv = [
+  'NODE_ENV',
   'MONGO_URI',
   'JWT_SECRET',
   'FRONTEND_URL',
@@ -44,11 +45,19 @@ const nodemailer = require('nodemailer');
 const { fileTypeFromBuffer } = require('file-type');
 const { WebpayPlus, Options, IntegrationApiKeys, IntegrationCommerceCodes, Environment } = require('transbank-sdk');
 const sanitizeHtml = require('sanitize-html');
+const isProduction = process.env.NODE_ENV === 'production';
+
 const webpayTransaction = new WebpayPlus.Transaction(
   new Options(
-    IntegrationCommerceCodes.WEBPAY_PLUS,
-    IntegrationApiKeys.WEBPAY,
-    Environment.Integration
+    isProduction
+      ? process.env.WEBPAY_COMMERCE_CODE
+      : IntegrationCommerceCodes.WEBPAY_PLUS,
+    isProduction
+      ? process.env.WEBPAY_API_KEY
+      : IntegrationApiKeys.WEBPAY,
+    isProduction
+      ? Environment.Production
+      : Environment.Integration
   )
 );
 const app = express();
