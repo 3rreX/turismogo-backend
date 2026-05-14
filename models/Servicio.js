@@ -23,4 +23,4 @@ const servicioSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("Servicio", servicioSchema);
+module.exports = mongoose.models.Servicio || mongoose.model("Servicio", servicioSchema);

@@ -45,7 +45,9 @@ const nodemailer = require('nodemailer');
 const { fileTypeFromBuffer } = require('file-type');
 const { WebpayPlus, Options, IntegrationApiKeys, IntegrationCommerceCodes, Environment } = require('transbank-sdk');
 const sanitizeHtml = require('sanitize-html');
+const serviciosRoutes = require("./routes/servicios");
 const isProduction = process.env.NODE_ENV === 'production';
+
 
 const webpayTransaction = new WebpayPlus.Transaction(
   new Options(
@@ -393,6 +395,8 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.use("/api/servicios", serviciosRoutes);
 // =========================
 // MODELOS
 // =========================
@@ -631,10 +635,10 @@ const pagoSchema = new mongoose.Schema({
   
 });
 
-const Pago = mongoose.model('Pago', pagoSchema);
+const Pago = mongoose.models.Pago || mongoose.model('Pago', pagoSchema);
 
-const Usuario = mongoose.model('Usuario', usuarioSchema);
-const Servicio = mongoose.model('Servicio', servicioSchema);
+const Usuario = mongoose.models.Usuario || mongoose.model('Usuario', usuarioSchema);
+const Servicio = mongoose.models.Servicio || mongoose.model('Servicio', servicioSchema);
 const auditoriaSchema = new mongoose.Schema({
   adminId: {
     type: mongoose.Schema.Types.ObjectId,
