@@ -803,18 +803,19 @@ app.get('/api/health', (req, res) => {
 // Registro
 app.post('/api/register', registerLimiter, async (req, res) => {
   try {
-    const username = limpiarTexto(req.body.username, 60);
-const password = limpiarTexto(req.body.password, 100);
+    const username = limpiarTexto(req.body.username, 60).toLowerCase();
+    const password = limpiarTexto(req.body.password, 100);
 
     if (!username || !password) {
       return res.status(400).json({ error: 'Username y password son obligatorios' });
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
   return res.status(400).json({
-    error: 'La contraseña debe tener al menos 6 caracteres'
+    error: 'La contraseña debe tener al menos 8 caracteres'
   });
 }
+
 
     const existe = await Usuario.findOne({ username });
 
@@ -842,7 +843,7 @@ app.post('/api/register-propietario', registerLimiter, async (req, res) => {
     const nombreCompleto = limpiarTexto(req.body.nombreCompleto, 100);
 const telefono = limpiarTexto(req.body.telefono, 30);
 const email = limpiarTexto(req.body.email, 100).toLowerCase();
-const username = limpiarTexto(req.body.username, 60);
+const username = limpiarTexto(req.body.username, 60).toLowerCase();
 const password = limpiarTexto(req.body.password, 100);
 
     if (!nombreCompleto || !telefono || !email || !username || !password) {
@@ -856,9 +857,9 @@ const password = limpiarTexto(req.body.password, 100);
   });
 }
 
-if (password.length < 6) {
+if (password.length < 8) {
   return res.status(400).json({
-    error: 'La contraseña debe tener al menos 6 caracteres'
+    error: 'La contraseña debe tener al menos 8 caracteres'
   });
 }
 
@@ -901,7 +902,7 @@ if (password.length < 6) {
 // Login
 app.post('/api/login', loginLimiter, async (req, res) => {
   try {
-    const username = limpiarTexto(req.body.username, 60);
+    const username = limpiarTexto(req.body.username, 60).toLowerCase();
 const password = limpiarTexto(req.body.password, 100);
 
 if (!username || !password) {
