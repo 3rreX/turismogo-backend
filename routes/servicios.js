@@ -9,6 +9,24 @@ const uploadToCloudinary = require("../utils/uploadToCloudinary");
 const auth = require("../middleware/auth");
 const verifyRole = require("../middleware/verifyRole");
 
+// LISTAR SERVICIOS PUBLICOS
+router.get("/", async (req, res) => {
+  try {
+    const limit = Math.min(Number(req.query.limit) || 24, 50);
+
+    const servicios = await Servicio.find()
+      .sort({ createdAt: -1 })
+      .limit(limit);
+
+    res.json(servicios);
+  } catch (error) {
+    console.error("Error al listar servicios:", error);
+    res.status(500).json({
+      mensaje: "Error al cargar servicios",
+    });
+  }
+});
+
 // CREAR SERVICIO CON IMAGEN
 router.post(
   "/",
