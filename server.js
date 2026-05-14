@@ -902,7 +902,7 @@ if (password.length < 8) {
 // Login
 app.post('/api/login', loginLimiter, async (req, res) => {
   try {
-    const username = limpiarTexto(req.body.username, 60).toLowerCase();
+   const username = limpiarTexto(req.body.username, 60).toLowerCase();
 const password = limpiarTexto(req.body.password, 100);
 
 if (!username || !password) {
@@ -911,7 +911,7 @@ if (!username || !password) {
   });
 }
 
-    const usuario = await Usuario.findOne({ username }).select("+password");
+const usuario = await Usuario.findOne({ username }).select("+password");
 
    if (!usuario) {
   await new Promise(r => setTimeout(r, 500));
