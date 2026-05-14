@@ -401,50 +401,76 @@ app.use("/api/servicios", serviciosRoutes);
 // MODELOS
 // =========================
 
-const usuarioSchema = new mongoose.Schema({
-  nombreCompleto: {
-  type: String,
-  default: ''
-},
-telefono: {
-  type: String,
-  default: ''
-},
-email: {
-  type: String,
-  default: '',
-  lowercase: true
-},
-  username: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  password: {
-    type: String,
-    required: true
-  },
-  role: {
-    type: String,
-    enum: ['usuario', 'propietario', 'admin'],
-    default: 'usuario'
-  },
-  suscripcionActiva: {
-    type: Boolean,
-    default: false
-  },
-  plan: {
-    type: String,
-    enum: ['ninguno', 'basico', 'pro', 'premium'],
-    default: 'ninguno'
-  },
+const usuarioSchema = new mongoose.Schema(
+  {
+    nombreCompleto: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 120,
+    },
 
-  tokenVersion: {
-  type: Number,
-  default: 0
-}
+    telefono: {
+      type: String,
+      trim: true,
+      default: "",
+      maxlength: 30,
+    },
 
-});
+    email: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      default: "",
+      index: true,
+      match: [/^\S+@\S+\.\S+$/, "Email inválido"],
+    },
+
+    username: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+      minlength: 3,
+      maxlength: 40,
+      index: true,
+    },
+
+    password: {
+      type: String,
+      required: true,
+      minlength: 6,
+      select: false,
+    },
+
+    role: {
+      type: String,
+      enum: ["usuario", "propietario", "admin"],
+      default: "usuario",
+      index: true,
+    },
+
+    suscripcionActiva: {
+      type: Boolean,
+      default: false,
+    },
+
+    plan: {
+      type: String,
+      enum: ["ninguno", "basico", "pro", "premium"],
+      default: "ninguno",
+    },
+
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 const servicioSchema = new mongoose.Schema({
   nombre: {
     type: String,
@@ -884,7 +910,7 @@ if (!username || !password) {
   });
 }
 
-    const usuario = await Usuario.findOne({ username });
+    const usuario = await Usuario.findOne({ username }).select("+password");
 
    if (!usuario) {
   await new Promise(r => setTimeout(r, 500));
