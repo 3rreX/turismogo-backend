@@ -46,6 +46,10 @@ const { fileTypeFromBuffer } = require('file-type');
 const { WebpayPlus, Options, IntegrationApiKeys, IntegrationCommerceCodes, Environment } = require('transbank-sdk');
 const sanitizeHtml = require('sanitize-html');
 const serviciosRoutes = require("./routes/servicios");
+const mongoSanitize = require("express-mongo-sanitize");
+const hpp = require("hpp");
+const compression = require("compression");
+const morgan = require("morgan");
 const isProduction = process.env.NODE_ENV === 'production';
 
 
@@ -63,6 +67,15 @@ const webpayTransaction = new WebpayPlus.Transaction(
   )
 );
 const app = express();
+app.set("trust proxy", 1);
+
+if (process.env.NODE_ENV !== "production") {
+  app.use(morgan("dev"));
+}
+
+app.use(compression());
+app.use(mongoSanitize());
+app.use(hpp());
 app.set('trust proxy', 1);
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME?.trim(),
@@ -1831,7 +1844,10 @@ if (!esFechaValida(fechaInicio) || !esFechaValida(fechaFin)) {
   });
 }
 
-if (fechaFin < fechaInicio) {
+const inicio = new Date(fechaInicio);
+const fin = new Date(fechaFin);
+
+if (fin < inicio) {
   return res.status(400).json({
     error: 'La fecha final no puede ser menor a la fecha inicial'
   });
@@ -1848,7 +1864,7 @@ if (fechaFin < fechaInicio) {
 
     const conflicto = await Reserva.findOne({
   servicioId: servicio._id,
-  estado: { $in: ['pendiente', 'confirmada'] },
+  estado: { $in: ['confirmada'] },
   fechaInicio: { $lte: fechaFin },
   fechaFin: { $gte: fechaInicio }
 });
