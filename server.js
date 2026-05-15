@@ -76,7 +76,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 app.use(compression());
-app.use(mongoSanitize());
+app.use(mongoSanitize());// app.use(mongoSanitize());
 app.use(hpp());
 app.set('trust proxy', 1);
 cloudinary.config({
