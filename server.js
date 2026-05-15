@@ -45,6 +45,8 @@ const nodemailer = require('nodemailer');
 const { fileTypeFromBuffer } = require('file-type');
 const { WebpayPlus, Options, IntegrationApiKeys, IntegrationCommerceCodes, Environment } = require('transbank-sdk');
 const sanitizeHtml = require('sanitize-html');
+const Usuario = require("./models/Usuario");
+const Servicio = require("./models/Servicio");
 const serviciosRoutes = require("./routes/servicios");
 const mongoSanitize = require("express-mongo-sanitize");
 const hpp = require("hpp");
@@ -414,103 +416,6 @@ app.use("/api/servicios", serviciosRoutes);
 // MODELOS
 // =========================
 
-const usuarioSchema = new mongoose.Schema(
-  {
-    nombreCompleto: {
-      type: String,
-      trim: true,
-      default: "",
-      maxlength: 120,
-    },
-
-    telefono: {
-      type: String,
-      trim: true,
-      default: "",
-      maxlength: 30,
-    },
-
-    email: {
-      type: String,
-      trim: true,
-      lowercase: true,
-      default: "",
-      index: true,
-      match: [/^\S+@\S+\.\S+$/, "Email inválido"],
-    },
-
-    username: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      lowercase: true,
-      minlength: 3,
-      maxlength: 40,
-      index: true,
-    },
-
-    password: {
-      type: String,
-      required: true,
-      minlength: 6,
-      select: false,
-    },
-
-    role: {
-      type: String,
-      enum: ["usuario", "propietario", "admin"],
-      default: "usuario",
-      index: true,
-    },
-
-    suscripcionActiva: {
-      type: Boolean,
-      default: false,
-    },
-
-    plan: {
-      type: String,
-      enum: ["ninguno", "basico", "pro", "premium"],
-      default: "ninguno",
-    },
-
-    tokenVersion: {
-      type: Number,
-      default: 0,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-const servicioSchema = new mongoose.Schema({
-  nombre: {
-    type: String,
-    required: true
-  },
-  descripcion: {
-    type: String,
-    required: true
-  },
-  precio: {
-    type: Number,
-    required: true
-  },
-  imagen: {
-    type: String,
-    required: false
-  },
-  imagenes: {
-    type: [String],
-    default: []
-  },
-  propietarioId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Usuario',
-    required: false
-  }
-});
 const reservaSchema = new mongoose.Schema({
   usuarioId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -676,8 +581,6 @@ const pagoSchema = new mongoose.Schema({
 
 const Pago = mongoose.models.Pago || mongoose.model('Pago', pagoSchema);
 
-const Usuario = mongoose.models.Usuario || mongoose.model('Usuario', usuarioSchema);
-const Servicio = mongoose.models.Servicio || mongoose.model('Servicio', servicioSchema);
 const auditoriaSchema = new mongoose.Schema({
   adminId: {
     type: mongoose.Schema.Types.ObjectId,
