@@ -55,19 +55,34 @@ const morgan = require("morgan");
 const isProduction = process.env.NODE_ENV === 'production';
 
 
-const webpayTransaction = new WebpayPlus.Transaction(
-  new Options(
-    isProduction
-      ? process.env.WEBPAY_COMMERCE_CODE
-      : IntegrationCommerceCodes.WEBPAY_PLUS,
-    isProduction
-      ? process.env.WEBPAY_API_KEY
-      : IntegrationApiKeys.WEBPAY,
-    isProduction
-      ? Environment.Production
-      : Environment.Integration
-  )
+const {
+  WebpayPlus,
+  Options,
+  IntegrationApiKeys,
+  IntegrationCommerceCodes,
+  Environment
+} = require('transbank-sdk');
+
+const isWebpayProduction =
+  process.env.WEBPAY_ENV === 'production' &&
+  process.env.WEBPAY_COMMERCE_CODE &&
+  process.env.WEBPAY_API_KEY;
+
+const webpayOptions = new Options(
+  isWebpayProduction
+    ? process.env.WEBPAY_COMMERCE_CODE
+    : IntegrationCommerceCodes.WEBPAY_PLUS,
+
+  isWebpayProduction
+    ? process.env.WEBPAY_API_KEY
+    : IntegrationApiKeys.WEBPAY,
+
+  isWebpayProduction
+    ? Environment.Production
+    : Environment.Integration
 );
+
+const webpayTransaction = new WebpayPlus.Transaction(webpayOptions);
 const app = express();
 app.set("trust proxy", 1);
 
