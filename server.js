@@ -515,7 +515,7 @@ montoPropietario: {
   enum: ['pendiente', 'pendiente_pago', 'confirmada', 'rechazada', 'cancelada', 'expirada', 'reembolsada'],
   default: 'pendiente_pago',
   index: true
-  
+
 }}, {
   timestamps: true
 });
@@ -1781,11 +1781,11 @@ if (fin < inicio) {
       });
     }
 
-    const conflicto = await Reserva.findOne({
+   const conflicto = await Reserva.findOne({
   servicioId: servicio._id,
   estado: { $in: ['confirmada'] },
-  fechaInicio: { $lte: fechaFin },
-  fechaFin: { $gte: fechaInicio }
+  fechaInicio: { $lte: fin },
+  fechaFin: { $gte: inicio }
 });
 
 if (conflicto) {
@@ -1800,23 +1800,23 @@ const calculoComision = calcularComisionTurismoGO(
 );
 
     const nuevaReserva = new Reserva({
-      usuarioId: null,
-      servicioId: servicio._id,
-      servicio: servicio.nombre,
-      fechaInicio,
-      fechaFin,
-      personas,
-      nombreCliente,
-      emailCliente,
-      telefonoCliente,
-      mensajeCliente,
-      montoPagado: servicio.precio,
-      comisionPorcentaje: calculoComision.porcentaje,
-      comisionTurismoGO: calculoComision.comision,
-      montoPropietario: calculoComision.montoPropietario,
-      pagoEstado: 'pendiente',
-      estado: 'pendiente'
-    });
+  usuarioId: null,
+  servicioId: servicio._id,
+  servicio: servicio.nombre,
+  fechaInicio: inicio,
+  fechaFin: fin,
+  personas,
+  nombreCliente,
+  emailCliente,
+  telefonoCliente,
+  mensajeCliente,
+  montoPagado: servicio.precio,
+  comisionPorcentaje: calculoComision.porcentaje,
+  comisionTurismoGO: calculoComision.comision,
+  montoPropietario: calculoComision.montoPropietario,
+  pagoEstado: 'pendiente',
+  estado: 'pendiente_pago'
+});
 
     await nuevaReserva.save();
  
