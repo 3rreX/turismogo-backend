@@ -55,13 +55,6 @@ const morgan = require("morgan");
 const isProduction = process.env.NODE_ENV === 'production';
 
 
-const {
-  WebpayPlus,
-  Options,
-  IntegrationApiKeys,
-  IntegrationCommerceCodes,
-  Environment
-} = require('transbank-sdk');
 
 const isWebpayProduction =
   process.env.WEBPAY_ENV === 'production' &&
