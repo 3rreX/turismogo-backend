@@ -443,15 +443,17 @@ const reservaSchema = new mongoose.Schema({
     required: true
   },
 
-  fechaInicio: {
-    type: String,
-    required: true
-  },
+ fechaInicio: {
+  type: Date,
+  required: true,
+  index: true
+},
 
-  fechaFin: {
-    type: String,
-    required: true
-  },
+fechaFin: {
+  type: Date,
+  required: true,
+  index: true
+},
 
   nombreCliente: {
     type: String,
@@ -509,10 +511,13 @@ montoPropietario: {
 },
 
   estado: {
-    type: String,
-    enum: ['pendiente', 'confirmada', 'rechazada', 'cancelada'],
-    default: 'pendiente'
-  }
+  type: String,
+  enum: ['pendiente', 'pendiente_pago', 'confirmada', 'rechazada', 'cancelada', 'expirada', 'reembolsada'],
+  default: 'pendiente_pago',
+  index: true
+  
+}}, {
+  timestamps: true
 });
 
 const Reserva = mongoose.model('Reserva', reservaSchema);
@@ -1128,7 +1133,10 @@ if (!esFechaValida(fechaInicio) || !esFechaValida(fechaFin)) {
   });
 }
 
-if (fechaFin < fechaInicio) {
+const inicio = new Date(fechaInicio);
+const fin = new Date(fechaFin);
+
+if (fin < inicio) {
   return res.status(400).json({
     error: 'La fecha final no puede ser menor a la fecha inicial'
   });
@@ -1136,9 +1144,9 @@ if (fechaFin < fechaInicio) {
 
     const conflicto = await Reserva.findOne({
   servicio,
-  estado: { $in: ['pendiente', 'confirmada'] },
-  fechaInicio: { $lte: fechaFin },
-  fechaFin: { $gte: fechaInicio }
+  estado: { $in: ['confirmada'] },
+  fechaInicio: { $lte: fin },
+  fechaFin: { $gte: inicio }
 });
 
     if (conflicto) {
@@ -1155,9 +1163,9 @@ const nuevaReserva = new Reserva({
   usuarioId: req.user.id,
   servicioId: servicioEncontrado._id,
   servicio,
-  fechaInicio,
-  fechaFin,
-  estado: 'pendiente'
+  fechaInicio: inicio,
+  fechaFin: fin,
+  estado: 'pendiente_pago'
 });
 
     await nuevaReserva.save();
