@@ -1827,6 +1827,7 @@ const calculoComision = calcularComisionTurismoGO(
 });
 
     await nuevaReserva.save();
+    console.log('Reserva guardada:', nuevaReserva._id);
  
     const buyOrder = `res-${nuevaReserva._id.toString().slice(-20)}`;
     const sessionId = `publica-${nuevaReserva._id}`;
