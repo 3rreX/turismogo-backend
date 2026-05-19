@@ -229,23 +229,28 @@ async function expirarReservasPendientes() {
   try {
     const limite = new Date(Date.now() - 15 * 60 * 1000);
 
-    const resultado = await Reserva.updateMany(
-      {
-        estado: 'pendiente_pago',
-        pagoEstado: 'pendiente',
-        createdAt: { $lt: limite }
-      },
-      {
-        $set: {
-          estado: 'expirada',
-          pagoEstado: 'fallido'
-        }
-      }
-    );
+    const reservasPendientes = await Reserva.find({
+      estado: 'pendiente_pago',
+      pagoEstado: 'pendiente',
+      createdAt: { $lt: limite }
+    });
 
-    if (resultado.modifiedCount > 0) {
-      console.log(`Reservas expiradas automáticamente: ${resultado.modifiedCount}`);
+    if (reservasPendientes.length === 0) return;
+
+    for (const reserva of reservasPendientes) {
+      reserva.estado = 'expirada';
+      reserva.pagoEstado = 'fallido';
+
+      reserva.historialEstados.push({
+        estado: 'expirada',
+        pagoEstado: 'fallido',
+        descripcion: 'Reserva expirada automáticamente por no completar el pago dentro del tiempo permitido'
+      });
+
+      await reserva.save();
     }
+
+    console.log(`Reservas expiradas automáticamente: ${reservasPendientes.length}`);
   } catch (error) {
     console.error('Error al expirar reservas pendientes:', error);
   }
@@ -564,7 +569,28 @@ montoPropietario: {
   default: 'pendiente_pago',
   index: true
 
-}}, {
+},
+historialEstados: [
+  {
+    estado: {
+      type: String,
+      enum: ['pendiente', 'pendiente_pago', 'confirmada', 'rechazada', 'cancelada', 'expirada', 'reembolsada']
+    },
+    pagoEstado: {
+      type: String,
+      enum: ['pendiente', 'pagado', 'fallido']
+    },
+    descripcion: {
+      type: String,
+      default: ''
+    },
+    fecha: {
+      type: Date,
+      default: Date.now
+    }
+  }
+]
+}, {
   timestamps: true
 });
 
@@ -1863,7 +1889,15 @@ const calculoComision = calcularComisionTurismoGO(
   comisionTurismoGO: calculoComision.comision,
   montoPropietario: calculoComision.montoPropietario,
   pagoEstado: 'pendiente',
-  estado: 'pendiente_pago'
+  estado: 'pendiente_pago',
+  historialEstados: [
+  {
+    estado: 'pendiente_pago',
+    pagoEstado: 'pendiente',
+    descripcion: 'Reserva creada e iniciada para pago Webpay'
+  }
+]
+  
 });
 
     await nuevaReserva.save();
@@ -1952,6 +1986,15 @@ app.get('/api/reserva-publica/retorno', async (req, res) => {
       reserva.pagoEstado = 'pagado';
       reserva.estado = 'confirmada';
       reserva.montoPagado = commitResponse.amount || reserva.montoPagado;
+      reserva.pagoEstado = 'pagado';
+      reserva.estado = 'confirmada';
+      reserva.montoPagado = commitResponse.amount || reserva.montoPagado;
+
+reserva.historialEstados.push({
+  estado: 'confirmada',
+  pagoEstado: 'pagado',
+  descripcion: 'Pago autorizado por Webpay y reserva confirmada'
+});
 
       await reserva.save();
 
@@ -1993,6 +2036,12 @@ if (!reserva.voucherEnviado) {
 
     reserva.pagoEstado = 'fallido';
     reserva.estado = 'rechazada';
+
+    reserva.historialEstados.push({
+    estado: 'rechazada',
+    pagoEstado: 'fallido',
+    descripcion: 'Pago rechazado o no autorizado por Webpay'
+});
 
     await reserva.save();
 
