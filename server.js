@@ -613,6 +613,30 @@ historialEstados: [
   timestamps: true
 });
 
+reservaSchema.index({
+  servicioId: 1,
+  estado: 1,
+  fechaInicio: 1,
+  fechaFin: 1
+});
+
+reservaSchema.index({
+  pagoEstado: 1,
+  estado: 1,
+  createdAt: 1
+});
+
+reservaSchema.index({
+  emailCliente: 1,
+  createdAt: -1
+});
+
+reservaSchema.index({
+  usuarioId: 1,
+  createdAt: -1
+});
+
+
 const Reserva = mongoose.model('Reserva', reservaSchema);
 
 const mensajeSchema = new mongoose.Schema({
