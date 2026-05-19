@@ -1424,11 +1424,61 @@ app.get('/api/admin/servicios', authMiddleware, adminMiddleware, async (req, res
 });
 app.get('/api/admin/reservas', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const reservas = await Reserva.find()
-      .populate('usuarioId', 'username role')
-      .populate('servicioId', 'nombre precio propietarioId');
+    const {
+      estado,
+      pagoEstado,
+      q,
+      page = 1,
+      limit = 50
+    } = req.query;
 
-    res.json(reservas);
+    const filtros = {};
+
+    if (estado) {
+      filtros.estado = limpiarTexto(estado, 40);
+    }
+
+    if (pagoEstado) {
+      filtros.pagoEstado = limpiarTexto(pagoEstado, 40);
+    }
+
+    if (q) {
+      const busqueda = limpiarTexto(q, 100);
+
+      filtros.$or = [
+        { codigoReserva: { $regex: busqueda, $options: 'i' } },
+        { nombreCliente: { $regex: busqueda, $options: 'i' } },
+        { emailCliente: { $regex: busqueda, $options: 'i' } },
+        { servicio: { $regex: busqueda, $options: 'i' } }
+      ];
+    }
+
+    const paginaActual = Math.max(Number(page), 1);
+    const limiteSeguro = Math.min(Math.max(Number(limit), 1), 100);
+    const saltar = (paginaActual - 1) * limiteSeguro;
+
+    const [reservas, total] = await Promise.all([
+      Reserva.find(filtros)
+        .populate('usuarioId', 'username role')
+        .populate('servicioId', 'nombre precio propietarioId')
+        .sort({ createdAt: -1 })
+        .skip(saltar)
+        .limit(limiteSeguro)
+        .lean(),
+
+      Reserva.countDocuments(filtros)
+    ]);
+
+    res.json({
+      reservas,
+      pagination: {
+        total,
+        page: paginaActual,
+        limit: limiteSeguro,
+        pages: Math.ceil(total / limiteSeguro)
+      }
+    });
+
   } catch (error) {
     console.error('Error admin reservas:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
