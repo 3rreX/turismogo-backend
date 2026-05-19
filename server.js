@@ -1985,12 +1985,38 @@ app.get('/api/reserva-publica/retorno', async (req, res) => {
       commitResponse.response_code === 0;
 
     if (pagoAutorizado) {
-      reserva.pagoEstado = 'pagado';
-      reserva.estado = 'confirmada';
-      reserva.montoPagado = commitResponse.amount || reserva.montoPagado;
-      reserva.pagoEstado = 'pagado';
-      reserva.estado = 'confirmada';
-      reserva.montoPagado = commitResponse.amount || reserva.montoPagado;
+  const conflictoConfirmado = await Reserva.findOne({
+    _id: { $ne: reserva._id },
+    servicioId: reserva.servicioId,
+    estado: 'confirmada',
+    fechaInicio: { $lte: reserva.fechaFin },
+    fechaFin: { $gte: reserva.fechaInicio }
+  });
+
+  if (conflictoConfirmado) {
+    reserva.pagoEstado = 'fallido';
+    reserva.estado = 'rechazada';
+
+    reserva.historialEstados = reserva.historialEstados || [];
+
+    reserva.historialEstados.push({
+      estado: 'rechazada',
+      pagoEstado: 'fallido',
+      descripcion: 'Pago autorizado, pero la reserva fue rechazada por conflicto de disponibilidad'
+    });
+
+    await reserva.save();
+
+    return res.redirect(
+      `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=conflicto`
+    );
+  }
+
+  reserva.pagoEstado = 'pagado';
+  reserva.estado = 'confirmada';
+  reserva.montoPagado = commitResponse.amount || reserva.montoPagado;
+
+reserva.historialEstados = reserva.historialEstados || [];
 
 reserva.historialEstados.push({
   estado: 'confirmada',
