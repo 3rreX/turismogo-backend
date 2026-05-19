@@ -567,16 +567,33 @@ montoPropietario: {
 
   estado: {
   type: String,
-  enum: ['pendiente', 'pendiente_pago', 'confirmada', 'rechazada', 'cancelada', 'expirada', 'reembolsada'],
+  enum: [
+    'pendiente',
+    'pendiente_pago',
+    'confirmada',
+    'rechazada',
+    'cancelada',
+    'expirada',
+    'reembolso_pendiente',
+    'reembolsada'
+  ],
   default: 'pendiente_pago',
   index: true
-
 },
 historialEstados: [
   {
     estado: {
       type: String,
-      enum: ['pendiente', 'pendiente_pago', 'confirmada', 'rechazada', 'cancelada', 'expirada', 'reembolsada']
+      enum: [
+  'pendiente',
+  'pendiente_pago',
+  'confirmada',
+  'rechazada',
+  'cancelada',
+  'expirada',
+  'reembolso_pendiente',
+  'reembolsada'
+]
     },
     pagoEstado: {
       type: String,
@@ -1994,23 +2011,24 @@ app.get('/api/reserva-publica/retorno', async (req, res) => {
   });
 
   if (conflictoConfirmado) {
-    reserva.pagoEstado = 'fallido';
-    reserva.estado = 'rechazada';
+  reserva.pagoEstado = 'pagado';
+  reserva.estado = 'reembolso_pendiente';
+  reserva.montoPagado = commitResponse.amount || reserva.montoPagado;
 
-    reserva.historialEstados = reserva.historialEstados || [];
+  reserva.historialEstados = reserva.historialEstados || [];
 
-    reserva.historialEstados.push({
-      estado: 'rechazada',
-      pagoEstado: 'fallido',
-      descripcion: 'Pago autorizado, pero la reserva fue rechazada por conflicto de disponibilidad'
-    });
+  reserva.historialEstados.push({
+    estado: 'reembolso_pendiente',
+    pagoEstado: 'pagado',
+    descripcion: 'Pago autorizado por Webpay, pero existe conflicto de disponibilidad. Requiere revisión administrativa y posible reembolso.'
+  });
 
-    await reserva.save();
+  await reserva.save();
 
-    return res.redirect(
-      `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=conflicto`
-    );
-  }
+  return res.redirect(
+    `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=conflicto`
+  );
+}
 
   reserva.pagoEstado = 'pagado';
   reserva.estado = 'confirmada';
