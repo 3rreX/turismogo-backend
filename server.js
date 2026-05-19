@@ -241,11 +241,13 @@ async function expirarReservasPendientes() {
       reserva.estado = 'expirada';
       reserva.pagoEstado = 'fallido';
 
-      reserva.historialEstados.push({
-        estado: 'expirada',
-        pagoEstado: 'fallido',
-        descripcion: 'Reserva expirada automáticamente por no completar el pago dentro del tiempo permitido'
-      });
+      reserva.historialEstados = reserva.historialEstados || [];
+
+reserva.historialEstados.push({
+  estado: 'expirada',
+  pagoEstado: 'fallido',
+  descripcion: 'Reserva expirada automáticamente por no completar el pago dentro del tiempo permitido'
+});
 
       await reserva.save();
     }
