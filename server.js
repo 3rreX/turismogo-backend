@@ -225,6 +225,31 @@ function calcularComisionTurismoGO(monto, plan) {
   };
 }
 
+async function expirarReservasPendientes() {
+  try {
+    const limite = new Date(Date.now() - 15 * 60 * 1000);
+
+    const resultado = await Reserva.updateMany(
+      {
+        estado: 'pendiente_pago',
+        pagoEstado: 'pendiente',
+        createdAt: { $lt: limite }
+      },
+      {
+        $set: {
+          estado: 'expirada',
+          pagoEstado: 'fallido'
+        }
+      }
+    );
+
+    if (resultado.modifiedCount > 0) {
+      console.log(`Reservas expiradas automáticamente: ${resultado.modifiedCount}`);
+    }
+  } catch (error) {
+    console.error('Error al expirar reservas pendientes:', error);
+  }
+}
 async function validarImagenReal(fileBuffer) {
   const tipoArchivo = await fileTypeFromBuffer(fileBuffer);
 
@@ -2144,6 +2169,7 @@ mongoose.connect(process.env.MONGO_URI)
        
     app.listen(PORT, () => {
       console.log(`🚀 Servidor en http://localhost:${PORT}`);
+       setInterval(expirarReservasPendientes, 5 * 60 * 1000);
     });
   })
   .catch(err => console.error('❌ Error MongoDB:', err));
