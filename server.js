@@ -527,6 +527,21 @@ fechaFin: {
   type: String,
   default: ''
   },
+  codigoReserva: {
+  type: String,
+  default: '',
+  index: true
+},
+
+voucherEnviado: {
+  type: Boolean,
+  default: false
+},
+
+voucherEnviadoEn: {
+  type: Date,
+  default: null
+},
 
   comisionPorcentaje: {
   type: Number,
@@ -1940,25 +1955,36 @@ app.get('/api/reserva-publica/retorno', async (req, res) => {
 
       await reserva.save();
 
-      const codigoReserva = `TG-${reserva._id.toString().slice(-6).toUpperCase()}`;
-      const fechaEmision = new Date().toLocaleDateString('es-CL');
-      const montoVoucher = Number(reserva.montoPagado || 0).toLocaleString('es-CL');
+    const codigoReserva =
+  reserva.codigoReserva || `TG-${reserva._id.toString().slice(-6).toUpperCase()}`;
 
-      await enviarCorreo({
-        to: reserva.emailCliente,
-        subject: `Voucher de reserva confirmada ${codigoReserva} - TurismoGO`,
-        html: `
-          <h2>Reserva confirmada</h2>
-          <p><strong>Código:</strong> ${codigoReserva}</p>
-          <p><strong>Servicio:</strong> ${reserva.servicio}</p>
-          <p><strong>Cliente:</strong> ${reserva.nombreCliente}</p>
-          <p><strong>Email:</strong> ${reserva.emailCliente}</p>
-          <p><strong>Teléfono:</strong> ${reserva.telefonoCliente || 'No informado'}</p>
-          <p><strong>Fechas:</strong> ${new Date(reserva.fechaInicio).toLocaleDateString('es-CL')} al ${new Date(reserva.fechaFin).toLocaleDateString('es-CL')}</p>
-          <p><strong>Monto pagado:</strong> $${montoVoucher}</p>
-          <p><strong>Fecha emisión:</strong> ${fechaEmision}</p>
-        `
-      });
+reserva.codigoReserva = codigoReserva;
+
+const fechaEmision = new Date().toLocaleDateString('es-CL');
+const montoVoucher = Number(reserva.montoPagado || 0).toLocaleString('es-CL');
+
+if (!reserva.voucherEnviado) {
+  await enviarCorreo({
+    to: reserva.emailCliente,
+    subject: `Voucher de reserva confirmada ${codigoReserva} - TurismoGO`,
+    html: `
+      <h2>Reserva confirmada</h2>
+      <p><strong>Código:</strong> ${codigoReserva}</p>
+      <p><strong>Servicio:</strong> ${reserva.servicio}</p>
+      <p><strong>Cliente:</strong> ${reserva.nombreCliente}</p>
+      <p><strong>Email:</strong> ${reserva.emailCliente}</p>
+      <p><strong>Teléfono:</strong> ${reserva.telefonoCliente || 'No informado'}</p>
+      <p><strong>Fechas:</strong> ${new Date(reserva.fechaInicio).toLocaleDateString('es-CL')} al ${new Date(reserva.fechaFin).toLocaleDateString('es-CL')}</p>
+      <p><strong>Monto pagado:</strong> $${montoVoucher}</p>
+      <p><strong>Fecha emisión:</strong> ${fechaEmision}</p>
+    `
+  });
+
+  reserva.voucherEnviado = true;
+  reserva.voucherEnviadoEn = new Date();
+
+  await reserva.save();
+}
 
       return res.redirect(
         `${process.env.FRONTEND_URL}/reserva-resultado.html?pago=exitoso`
