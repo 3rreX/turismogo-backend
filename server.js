@@ -1360,7 +1360,16 @@ app.put('/api/reservas/:id/cancelar', authMiddleware, async (req, res) => {
     }
 
     reserva.estado = 'cancelada';
-    await reserva.save();
+
+reserva.historialEstados = reserva.historialEstados || [];
+
+reserva.historialEstados.push({
+  estado: 'cancelada',
+  pagoEstado: reserva.pagoEstado || 'pendiente',
+  descripcion: 'Reserva cancelada por el usuario'
+});
+
+await reserva.save();
 
     res.json({
       message: 'Reserva cancelada correctamente',
@@ -1373,35 +1382,112 @@ app.put('/api/reservas/:id/cancelar', authMiddleware, async (req, res) => {
 });
 app.put('/api/reservas/:id/estado', authMiddleware, propietarioMiddleware, async (req, res) => {
   try {
-    const { estado } = req.body;
+    const { id } = req.params;
+    const estadoSolicitado = limpiarTexto(req.body.estado, 40);
 
-    if (!['confirmada', 'rechazada', 'cancelada'].includes(estado)) {
-      return res.status(400).json({ error: 'Estado inválido' });
+    const estadosPermitidos = [
+      'confirmada',
+      'rechazada',
+      'cancelada',
+      'reembolso_pendiente',
+      'reembolsada'
+    ];
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        error: 'ID de reserva inválido'
+      });
     }
 
-    const reserva = await Reserva.findById(req.params.id).populate('servicioId');
+    if (!estadosPermitidos.includes(estadoSolicitado)) {
+      return res.status(400).json({
+        error: 'Estado de reserva no permitido'
+      });
+    }
+
+    const reserva = await Reserva.findById(id).populate('servicioId');
 
     if (!reserva) {
-      return res.status(404).json({ error: 'Reserva no encontrada' });
+      return res.status(404).json({
+        error: 'Reserva no encontrada'
+      });
     }
+
+    const esAdmin = req.user.role === 'admin';
+    const esPropietarioDelServicio =
+      reserva.servicioId?.propietarioId?.toString() === req.user.id;
+
+    if (!esAdmin && !esPropietarioDelServicio) {
+      return res.status(403).json({
+        error: 'No puedes modificar esta reserva'
+      });
+    }
+
+    if (reserva.estado === 'reembolsada') {
+      return res.status(400).json({
+        error: 'No se puede modificar una reserva ya reembolsada'
+      });
+    }
+
+    if (reserva.estado === estadoSolicitado) {
+      return res.status(400).json({
+        error: 'La reserva ya se encuentra en ese estado'
+      });
+    }
+
+    if (estadoSolicitado === 'confirmada' && reserva.pagoEstado !== 'pagado') {
+      return res.status(400).json({
+        error: 'No se puede confirmar una reserva sin pago registrado'
+      });
+    }
+
+    if (estadoSolicitado === 'reembolso_pendiente' && reserva.pagoEstado !== 'pagado') {
+      return res.status(400).json({
+        error: 'Solo una reserva pagada puede quedar como reembolso pendiente'
+      });
+    }
+
+    if (estadoSolicitado === 'reembolsada' && !esAdmin) {
+      return res.status(403).json({
+        error: 'Solo un administrador puede marcar una reserva como reembolsada'
+      });
+    }
+
+    reserva.estado = estadoSolicitado;
 
     if (
-      reserva.servicioId?.propietarioId?.toString() !== req.user.id &&
-      req.user.role !== 'admin'
+      ['rechazada', 'cancelada'].includes(estadoSolicitado) &&
+      reserva.pagoEstado !== 'pagado'
     ) {
-      return res.status(403).json({ error: 'No puedes modificar esta reserva' });
+      reserva.pagoEstado = 'fallido';
     }
 
-    reserva.estado = estado;
+    if (estadoSolicitado === 'reembolsada') {
+      reserva.pagoEstado = 'fallido';
+    }
+
+    reserva.historialEstados = reserva.historialEstados || [];
+
+    reserva.historialEstados.push({
+      estado: estadoSolicitado,
+      pagoEstado: reserva.pagoEstado || 'pendiente',
+      descripcion: esAdmin
+        ? `Estado actualizado manualmente por administrador a ${estadoSolicitado}`
+        : `Estado actualizado manualmente por propietario a ${estadoSolicitado}`
+    });
+
     await reserva.save();
 
     res.json({
-      message: 'Estado de reserva actualizado',
+      message: 'Estado de reserva actualizado correctamente',
       reserva
     });
+
   } catch (error) {
     console.error('Error al actualizar estado de reserva:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({
+      error: 'Error interno del servidor'
+    });
   }
 });
 app.get('/api/admin/usuarios', authMiddleware, adminMiddleware, async (req, res) => {
