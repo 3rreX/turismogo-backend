@@ -1521,8 +1521,19 @@ app.get('/api/admin/reservas', authMiddleware, adminMiddleware, async (req, res)
     const filtros = {};
 
     if (estado) {
-      filtros.estado = limpiarTexto(estado, 40);
-    }
+  const estadosSolicitados = limpiarTexto(estado, 200)
+    .split(',')
+    .map(e => e.trim())
+    .filter(Boolean);
+
+  if (estadosSolicitados.length === 1) {
+    filtros.estado = estadosSolicitados[0];
+  }
+
+  if (estadosSolicitados.length > 1) {
+    filtros.estado = { $in: estadosSolicitados };
+  }
+}
 
     if (pagoEstado) {
       filtros.pagoEstado = limpiarTexto(pagoEstado, 40);
