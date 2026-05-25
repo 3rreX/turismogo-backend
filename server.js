@@ -1508,6 +1508,74 @@ app.get('/api/admin/servicios', authMiddleware, adminMiddleware, async (req, res
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+
+app.get('/api/admin/reservas/stats', authMiddleware, adminMiddleware, async (req, res) => {
+  try {
+    const [
+      pendientesPago,
+      reembolsoPendiente,
+      confirmadas,
+      rechazadas,
+      canceladas,
+      expiradas,
+      reembolsadas,
+      total,
+      resumenFinanciero
+    ] = await Promise.all([
+      Reserva.countDocuments({ estado: 'pendiente_pago' }),
+      Reserva.countDocuments({ estado: 'reembolso_pendiente' }),
+      Reserva.countDocuments({ estado: 'confirmada' }),
+      Reserva.countDocuments({ estado: 'rechazada' }),
+      Reserva.countDocuments({ estado: 'cancelada' }),
+      Reserva.countDocuments({ estado: 'expirada' }),
+      Reserva.countDocuments({ estado: 'reembolsada' }),
+      Reserva.countDocuments({}),
+
+      Reserva.aggregate([
+        {
+          $match: {
+            pagoEstado: 'pagado'
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            ventasTotales: { $sum: '$montoPagado' },
+            comisionTurismoGO: { $sum: '$comisionTurismoGO' },
+            montoPropietarios: { $sum: '$montoPropietario' }
+          }
+        }
+      ])
+    ]);
+
+    const financiero = resumenFinanciero[0] || {
+      ventasTotales: 0,
+      comisionTurismoGO: 0,
+      montoPropietarios: 0
+    };
+
+    res.json({
+      pendientesPago,
+      reembolsoPendiente,
+      confirmadas,
+      rechazadas,
+      canceladas,
+      expiradas,
+      reembolsadas,
+      total,
+      cerradas: rechazadas + canceladas + expiradas + reembolsadas,
+      ventasTotales: financiero.ventasTotales || 0,
+      comisionTurismoGO: financiero.comisionTurismoGO || 0,
+      montoPropietarios: financiero.montoPropietarios || 0
+    });
+
+  } catch (error) {
+    console.error('Error estadísticas reservas admin:', error);
+    res.status(500).json({
+      error: 'Error interno al obtener estadísticas de reservas'
+    });
+  }
+});
 app.get('/api/admin/reservas', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const {
