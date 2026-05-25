@@ -1579,12 +1579,14 @@ app.get('/api/admin/reservas/stats', authMiddleware, adminMiddleware, async (req
 app.get('/api/admin/reservas', authMiddleware, adminMiddleware, async (req, res) => {
   try {
     const {
-      estado,
-      pagoEstado,
-      q,
-      page = 1,
-      limit = 50
-    } = req.query;
+  estado,
+  pagoEstado,
+  q,
+  fechaDesde,
+  fechaHasta,
+  page = 1,
+  limit = 50
+} = req.query;
 
     const filtros = {};
 
@@ -1617,6 +1619,25 @@ app.get('/api/admin/reservas', authMiddleware, adminMiddleware, async (req, res)
         { servicio: { $regex: busqueda, $options: 'i' } }
       ];
     }
+    if (fechaDesde || fechaHasta) {
+  filtros.createdAt = {};
+
+  if (fechaDesde && esFechaValida(fechaDesde)) {
+    const desde = new Date(fechaDesde);
+    desde.setHours(0, 0, 0, 0);
+    filtros.createdAt.$gte = desde;
+  }
+
+  if (fechaHasta && esFechaValida(fechaHasta)) {
+    const hasta = new Date(fechaHasta);
+    hasta.setHours(23, 59, 59, 999);
+    filtros.createdAt.$lte = hasta;
+  }
+
+  if (Object.keys(filtros.createdAt).length === 0) {
+    delete filtros.createdAt;
+  }
+}
 
     const paginaActual = Math.max(Number(page), 1);
     const limiteSeguro = Math.min(Math.max(Number(limit), 1), 100);
