@@ -1304,6 +1304,127 @@ app.get('/api/reservas', authMiddleware, async (req, res) => {
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
+app.get('/api/propietario/reservas/stats', authMiddleware, propietarioMiddleware, async (req, res) => {
+  try {
+    const serviciosDelPropietario = await Servicio.find({
+      propietarioId: req.user.id
+    }).select('_id');
+
+    const idsServicios = serviciosDelPropietario.map(s => s._id);
+
+    if (idsServicios.length === 0) {
+      return res.json({
+        pendientesPago: 0,
+        reembolsoPendiente: 0,
+        confirmadas: 0,
+        rechazadas: 0,
+        canceladas: 0,
+        expiradas: 0,
+        reembolsadas: 0,
+        total: 0,
+        ingresosConfirmados: 0,
+        comisionTurismoGO: 0,
+        montoPropietario: 0
+      });
+    }
+
+    const filtroBase = {
+      servicioId: { $in: idsServicios }
+    };
+
+    const [
+      pendientesPago,
+      reembolsoPendiente,
+      confirmadas,
+      rechazadas,
+      canceladas,
+      expiradas,
+      reembolsadas,
+      total,
+      resumenFinanciero
+    ] = await Promise.all([
+      Reserva.countDocuments({
+        ...filtroBase,
+        estado: 'pendiente_pago'
+      }),
+
+      Reserva.countDocuments({
+        ...filtroBase,
+        estado: 'reembolso_pendiente'
+      }),
+
+      Reserva.countDocuments({
+        ...filtroBase,
+        estado: 'confirmada'
+      }),
+
+      Reserva.countDocuments({
+        ...filtroBase,
+        estado: 'rechazada'
+      }),
+
+      Reserva.countDocuments({
+        ...filtroBase,
+        estado: 'cancelada'
+      }),
+
+      Reserva.countDocuments({
+        ...filtroBase,
+        estado: 'expirada'
+      }),
+
+      Reserva.countDocuments({
+        ...filtroBase,
+        estado: 'reembolsada'
+      }),
+
+      Reserva.countDocuments(filtroBase),
+
+      Reserva.aggregate([
+        {
+          $match: {
+            servicioId: { $in: idsServicios },
+            pagoEstado: 'pagado'
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            ingresosConfirmados: { $sum: '$montoPagado' },
+            comisionTurismoGO: { $sum: '$comisionTurismoGO' },
+            montoPropietario: { $sum: '$montoPropietario' }
+          }
+        }
+      ])
+    ]);
+
+    const financiero = resumenFinanciero[0] || {
+      ingresosConfirmados: 0,
+      comisionTurismoGO: 0,
+      montoPropietario: 0
+    };
+
+    res.json({
+      pendientesPago,
+      reembolsoPendiente,
+      confirmadas,
+      rechazadas,
+      canceladas,
+      expiradas,
+      reembolsadas,
+      total,
+      ingresosConfirmados: financiero.ingresosConfirmados || 0,
+      comisionTurismoGO: financiero.comisionTurismoGO || 0,
+      montoPropietario: financiero.montoPropietario || 0
+    });
+
+  } catch (error) {
+    console.error('Error estadísticas reservas propietario:', error);
+    res.status(500).json({
+      error: 'Error interno al obtener estadísticas del propietario'
+    });
+  }
+});
 app.get('/api/reservas-propietario', authMiddleware, propietarioMiddleware, async (req, res) => {
   try {
     const {
