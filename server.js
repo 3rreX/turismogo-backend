@@ -1306,22 +1306,97 @@ app.get('/api/reservas', authMiddleware, async (req, res) => {
 });
 app.get('/api/reservas-propietario', authMiddleware, propietarioMiddleware, async (req, res) => {
   try {
+    const {
+      estado,
+      pagoEstado,
+      q,
+      page = 1,
+      limit = 50
+    } = req.query;
+
     const serviciosDelPropietario = await Servicio.find({
       propietarioId: req.user.id
     }).select('_id');
 
     const idsServicios = serviciosDelPropietario.map(s => s._id);
 
-    const reservas = await Reserva.find({
-      servicioId: { $in: idsServicios }
-    })
-      .populate('usuarioId', 'username')
-      .populate('servicioId', 'nombre precio imagen');
+    if (idsServicios.length === 0) {
+      return res.json({
+        reservas: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          limit: Number(limit) || 50,
+          pages: 0
+        }
+      });
+    }
 
-    res.json(reservas);
+    const filtros = {
+      servicioId: { $in: idsServicios }
+    };
+
+    if (estado) {
+      const estadosSolicitados = limpiarTexto(estado, 200)
+        .split(',')
+        .map(e => e.trim())
+        .filter(Boolean);
+
+      if (estadosSolicitados.length === 1) {
+        filtros.estado = estadosSolicitados[0];
+      }
+
+      if (estadosSolicitados.length > 1) {
+        filtros.estado = { $in: estadosSolicitados };
+      }
+    }
+
+    if (pagoEstado) {
+      filtros.pagoEstado = limpiarTexto(pagoEstado, 40);
+    }
+
+    if (q) {
+      const busqueda = limpiarTexto(q, 100);
+
+      filtros.$or = [
+        { codigoReserva: { $regex: busqueda, $options: 'i' } },
+        { nombreCliente: { $regex: busqueda, $options: 'i' } },
+        { emailCliente: { $regex: busqueda, $options: 'i' } },
+        { servicio: { $regex: busqueda, $options: 'i' } }
+      ];
+    }
+
+    const paginaActual = Math.max(Number(page), 1);
+    const limiteSeguro = Math.min(Math.max(Number(limit), 1), 100);
+    const saltar = (paginaActual - 1) * limiteSeguro;
+
+    const [reservas, total] = await Promise.all([
+      Reserva.find(filtros)
+        .populate('usuarioId', 'username role')
+        .populate('servicioId', 'nombre precio imagen propietarioId')
+        .sort({ createdAt: -1 })
+        .skip(saltar)
+        .limit(limiteSeguro)
+        .lean(),
+
+      Reserva.countDocuments(filtros)
+    ]);
+
+    res.json({
+      reservas,
+      pagination: {
+        total,
+        page: paginaActual,
+        limit: limiteSeguro,
+        pages: Math.ceil(total / limiteSeguro)
+      }
+    });
+
   } catch (error) {
     console.error('Error al obtener reservas del propietario:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({
+      error: 'Error interno del servidor'
+    });
   }
 });
 
